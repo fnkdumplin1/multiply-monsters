@@ -1,3 +1,59 @@
+/* Design System Color Variables */
+:root {
+  /* Primary Colors - Orange */
+  --primary-100: #FFF2EC;
+  --primary-400: #FF640C;
+  --primary-500: #FF5C2C;
+  --primary-600: #E65014;
+  --primary-700: #D94912;
+  
+  /* Secondary Colors */
+  --yellow-400: #FFED20;
+  --yellow-500: #FFE500;
+  --yellow-600: #F0CE00;
+  --yellow-700: #D9B816;
+  
+  --blue-400: #5BA7FF;
+  --blue-500: #2E8BFF;
+  --blue-dark-500: #1E4FD1;
+  --blue-dark2-500: #0B2B75;
+  
+  --purple-500: #A273CC;
+  --purple-600: #8B5FCF;
+  --purple-700: #8224AB;
+  --purple-800: #62388A;
+  
+  --pink-400: #E794CC;
+  --pink-500: #E36BC8;
+  --pink-600: #D576AC;
+  
+  /* Accent Colors */
+  --green-400: #7FCE65;
+  --green-500: #56A458;
+  
+  --teal-400: #7FCFC0;
+  --teal-500: #75BEB4;
+  
+  --success-500: #37F652;
+  --success-600: #35CE45;
+  
+  --error-400: #FF5858;
+  --error-500: #E13E3E;
+  
+  /* Neutral Colors */
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --gray-900: #111827;
+}
+
 /* Ensure full viewport coverage */
 html, body {
   min-height: 100%;
@@ -6,7 +62,7 @@ html, body {
 }
 
 body {
-  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 25%, #ffd23f 50%, #06ffa5 75%, #4ecdc4 100%);
+  background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-400) 25%, var(--yellow-500) 50%, var(--teal-400) 75%, var(--teal-500) 100%);
   background-attachment: fixed;
 }
 
@@ -1084,7 +1140,7 @@ body:has(input:focus) .mode-button::before {
 }
 
 .menu-container h1, .results-container h1 {
-  background: linear-gradient(45deg, #ff6b35, #f7931e, #ffd23f, #06ffa5);
+  background: linear-gradient(45deg, var(--primary-500), var(--primary-400), var(--yellow-500), var(--teal-400));
   background-size: 200% 200%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -1718,16 +1774,16 @@ body:has(input:focus) .mode-button::before {
 
 .detective-clue {
   font-size: 1.8rem;
-  color: #7b68ee;
+  color: var(--purple-700);
   margin-bottom: 30px;
   font-weight: bold;
   padding: 25px;
-  background: linear-gradient(135deg, rgba(123, 104, 238, 0.1), rgba(106, 90, 205, 0.1));
+  background: linear-gradient(135deg, rgba(130, 36, 171, 0.1), rgba(139, 95, 207, 0.1));
   border-radius: 20px;
-  border: 2px solid rgba(123, 104, 238, 0.3);
+  border: 2px solid var(--purple-600);
   line-height: 1.4;
   text-align: center;
-  box-shadow: 0 4px 15px rgba(123, 104, 238, 0.1);
+  box-shadow: 0 4px 15px rgba(130, 36, 171, 0.1);
 }
 
 .detective-inputs {
@@ -1748,55 +1804,55 @@ body:has(input:focus) .mode-button::before {
 .detective-input {
   font-size: 1.4rem;
   padding: 15px 20px;
-  border: 3px solid #7b68ee;
+  border: 3px solid var(--purple-600);
   border-radius: 15px;
   text-align: center;
   width: 120px;
   font-family: inherit;
-  background: white;
+  background: var(--white);
   will-change: contents;
   transform: translateZ(0);
 }
 
 .detective-input::placeholder {
   font-size: 0.8rem;
-  color: #999;
+  color: var(--gray-400);
 }
 
 .detective-input:focus {
   outline: none;
-  border-color: #9370db;
-  box-shadow: 0 0 10px rgba(123, 104, 238, 0.3);
+  border-color: var(--purple-700);
+  box-shadow: 0 0 10px rgba(130, 36, 171, 0.3);
 }
 
 .detective-input.prefilled {
-  background: linear-gradient(135deg, #e8f5e8, #d4edda);
-  border-color: #28a745;
-  color: #155724;
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+  border-color: var(--success-600);
+  color: var(--green-500);
   font-weight: bold;
   cursor: not-allowed;
 }
 
 .detective-input.prefilled:focus {
   outline: none;
-  border-color: #28a745;
-  box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
+  border-color: var(--success-600);
+  box-shadow: 0 0 10px rgba(53, 206, 69, 0.3);
 }
 
 .multiplication-symbol {
   font-size: 2rem;
-  color: #7b68ee;
+  color: var(--purple-600);
   font-weight: bold;
   margin: 0 5px;
 }
 
 .detective-submit {
-  background: #7b68ee;
-  border-color: #6a5acd;
+  background: var(--purple-600);
+  border-color: var(--purple-700);
 }
 
 .detective-submit:hover:not(:disabled) {
-  background: #9370db;
+  background: var(--purple-500);
   transform: translateY(-1px);
 }
 
@@ -1812,13 +1868,13 @@ body:has(input:focus) .mode-button::before {
 }
 
 .detective-progress {
-  background: white;
-  color: #7b68ee;
+  background: var(--white);
+  color: var(--purple-700);
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 600;
-  border: 2px solid #7b68ee;
+  border: 2px solid var(--purple-600);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   min-height: 32px;
   display: flex;
@@ -1885,7 +1941,7 @@ body:has(input:focus) .mode-button::before {
 
 .section-title {
   font-size: 1.2rem;
-  color: #667eea;
+  color: var(--blue-dark-500);
   margin: 0 0 15px 0;
   font-weight: bold;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
@@ -1949,48 +2005,48 @@ body:has(input:focus) .mode-button::before {
 
 /* Card-specific colors */
 .mode-card.training {
-  border-color: #10b981;
+  border-color: var(--green-500);
 }
 
 .mode-card.training:hover {
-  border-color: #059669;
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: var(--green-400);
+  background: linear-gradient(135deg, var(--gray-50) 0%, #ecfdf5 100%);
 }
 
 .mode-card.detective {
-  border-color: #7b68ee;
+  border-color: var(--purple-600);
 }
 
 .mode-card.detective:hover {
-  border-color: #6a5acd;
-  background: linear-gradient(135deg, #f3f0ff 0%, #e5dbff 100%);
+  border-color: var(--purple-700);
+  background: linear-gradient(135deg, var(--gray-50) 0%, #f3f0ff 100%);
 }
 
 .mode-card.timed {
-  border-color: #f59e0b;
+  border-color: var(--yellow-600);
 }
 
 .mode-card.timed:hover {
-  border-color: #d97706;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border-color: var(--yellow-700);
+  background: linear-gradient(135deg, var(--gray-50) 0%, #fffbeb 100%);
 }
 
 .mode-card.advanced {
-  border-color: #dc2626;
+  border-color: var(--error-500);
 }
 
 .mode-card.advanced:hover {
-  border-color: #b91c1c;
-  background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+  border-color: var(--error-400);
+  background: linear-gradient(135deg, var(--gray-50) 0%, #fef2f2 100%);
 }
 
 .mode-card.multiplayer {
-  border-color: #3b82f6;
+  border-color: var(--blue-500);
 }
 
 .mode-card.multiplayer:hover {
-  border-color: #2563eb;
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: var(--blue-400);
+  background: linear-gradient(135deg, var(--gray-50) 0%, #eff6ff 100%);
 }
 
 /* Mobile responsive for card layout */
