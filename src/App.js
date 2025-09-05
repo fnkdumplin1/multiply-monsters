@@ -14,6 +14,12 @@ function App() {
   const [userName, setUserName] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState({ a: 0, b: 0 });
   const [userAnswer, setUserAnswer] = useState('');
+  
+  // Monster Detective mode states
+  const [detectiveClue, setDetectiveClue] = useState({ type: '', clue: '', acceptedAnswers: [], prefilledFactor: null, prefilledPosition: null });
+  const [detectiveInput, setDetectiveInput] = useState({ factor1: '', factor2: '' });
+  const [detectiveQuestionCount, setDetectiveQuestionCount] = useState(0);
+  const detectiveMaxQuestions = 10;
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [timeLeft, setTimeLeft] = useState(60);
   const [gameActive, setGameActive] = useState(false);
@@ -617,6 +623,116 @@ function App() {
     }
   }, [backgroundMusic]);
 
+  // Monster Detective clue generation
+  const generateDetectiveClue = () => {
+    console.log(`🕵️ Generating detective clue for ${userName}`);
+    
+    // Clear previous inputs and prefilled state
+    setDetectiveInput({ factor1: '', factor2: '' });
+    setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    
+    const clueTypes = ['product', 'missingFactor', 'factorRange', 'factorProperty', 'divisionPrep'];
+    const selectedType = clueTypes[Math.floor(Math.random() * clueTypes.length)];
+    
+    let clue = '';
+    let acceptedAnswers = [];
+    let prefilledFactor = null;
+    let prefilledPosition = null;
+    
+    if (selectedType === 'product') {
+      // Generate a product with multiple factor pairs
+      const products = [12, 18, 20, 24, 30, 36, 40, 42, 48, 60, 72];
+      const product = products[Math.floor(Math.random() * products.length)];
+      
+      // Find all factor pairs for this product (within 1-12 range)
+      acceptedAnswers = [];
+      for (let i = 1; i <= 12; i++) {
+        if (product % i === 0 && product / i <= 12) {
+          const factor2 = product / i;
+          if (i <= factor2) { // Avoid duplicates like 3×4 and 4×3
+            acceptedAnswers.push([i, factor2]);
+          }
+        }
+      }
+      
+      clue = `🔍 My product is ${product}. What two numbers can you multiply to get ${product}?`;
+      
+    } else if (selectedType === 'missingFactor') {
+      const factor1 = Math.floor(Math.random() * 12) + 1;
+      const factor2 = Math.floor(Math.random() * 12) + 1;
+      const product = factor1 * factor2;
+      
+      clue = `🔍 I multiplied ${factor1} by another number and got ${product}. What was the other number?`;
+      acceptedAnswers = [[factor1, factor2]]; // Only one correct answer
+      
+    } else if (selectedType === 'factorRange') {
+      // Both factors between certain ranges
+      const minRange = Math.floor(Math.random() * 6) + 3; // 3-8
+      const maxRange = minRange + 3; // Range of 3 numbers
+      
+      const validPairs = [];
+      for (let i = minRange; i <= maxRange && i <= 12; i++) {
+        for (let j = i; j <= maxRange && j <= 12; j++) {
+          if (i * j <= 144) {
+            validPairs.push([i, j, i * j]);
+          }
+        }
+      }
+      
+      if (validPairs.length > 0) {
+        const selected = validPairs[Math.floor(Math.random() * validPairs.length)];
+        clue = `🔍 Both my factors are between ${minRange} and ${maxRange}, and my product is ${selected[2]}. What are my factors?`;
+        acceptedAnswers = [[selected[0], selected[1]]];
+      } else {
+        // Fallback to simpler clue
+        return generateDetectiveClue();
+      }
+      
+    } else if (selectedType === 'factorProperty') {
+      const isEvenClue = Math.random() > 0.5;
+      const knownFactor = Math.floor(Math.random() * 12) + 1;
+      
+      let unknownFactor;
+      if (isEvenClue) {
+        // Unknown factor is even
+        const evenFactors = [2, 4, 6, 8, 10, 12];
+        unknownFactor = evenFactors[Math.floor(Math.random() * evenFactors.length)];
+      } else {
+        // Unknown factor is odd  
+        const oddFactors = [1, 3, 5, 7, 9, 11];
+        unknownFactor = oddFactors[Math.floor(Math.random() * oddFactors.length)];
+      }
+      
+      const product = knownFactor * unknownFactor;
+      clue = `🔍 One factor is ${isEvenClue ? 'even' : 'odd'}, the other is ${knownFactor}, and the product is ${product}. What's the ${isEvenClue ? 'even' : 'odd'} factor?`;
+      acceptedAnswers = [[Math.min(knownFactor, unknownFactor), Math.max(knownFactor, unknownFactor)]];
+      
+    } else if (selectedType === 'divisionPrep') {
+      // Division prep: give one factor and the product, ask for the other factor
+      const factor1 = Math.floor(Math.random() * 12) + 1;
+      const factor2 = Math.floor(Math.random() * 12) + 1;
+      const product = factor1 * factor2;
+      
+      // Randomly choose which factor to give (position 1 or 2)
+      const giveFirstFactor = Math.random() > 0.5;
+      
+      if (giveFirstFactor) {
+        prefilledFactor = factor1;
+        prefilledPosition = 1;
+        clue = `🔍 My first number is ${factor1} and my product is ${product}. What's my second number?`;
+        acceptedAnswers = [[factor1, factor2]];
+      } else {
+        prefilledFactor = factor2;
+        prefilledPosition = 2;
+        clue = `🔍 My second number is ${factor2} and my product is ${product}. What's my first number?`;
+        acceptedAnswers = [[factor1, factor2]];
+      }
+    }
+    
+    setDetectiveClue({ type: selectedType, clue, acceptedAnswers, prefilledFactor, prefilledPosition });
+    console.log(`✅ Detective clue generated:`, { type: selectedType, clue, acceptedAnswers });
+  };
+
   const generateQuestion = () => {
     console.log(`🎲 Generating question for ${userName} (${userRole}) in session ${sessionCode}`);
     let a, b;
@@ -769,6 +885,149 @@ function App() {
         startBackgroundMusic();
       }
     });
+  };
+
+  const startDetective = () => {
+    initializeAudio(); // Initialize audio on game start
+    playSound('click');
+    trackEvent('game_start', 'Game', 'Monster Detective');
+    setGameMode('detective');
+    setPreviousGameMode('detective');
+    setScore({ correct: 0, total: 0 });
+    setDetectiveQuestionCount(1); // Start with question 1
+    setUsedQuestions(new Set()); // Clear used questions for new session
+    setGameActive(true);
+    generateDetectiveClue();
+    startBackgroundMusic();
+  };
+
+  const submitDetectiveAnswer = () => {
+    let factor1 = parseInt(detectiveInput.factor1);
+    let factor2 = parseInt(detectiveInput.factor2);
+    
+    // For division prep, use prefilled factor if available
+    if (detectiveClue.prefilledFactor !== null) {
+      if (detectiveClue.prefilledPosition === 1) {
+        factor1 = detectiveClue.prefilledFactor;
+      } else if (detectiveClue.prefilledPosition === 2) {
+        factor2 = detectiveClue.prefilledFactor;
+      }
+    }
+    
+    // For division prep, we only need to check the non-prefilled input
+    if (detectiveClue.type === 'divisionPrep') {
+      const nonPrefilledInput = detectiveClue.prefilledPosition === 1 ? factor2 : factor1;
+      if (!nonPrefilledInput || nonPrefilledInput < 1 || nonPrefilledInput > 12) {
+        return; // Invalid input
+      }
+    } else {
+      // For other clue types, check both inputs
+      if (!factor1 || !factor2 || factor1 < 1 || factor2 < 1 || factor1 > 12 || factor2 > 12) {
+        return; // Invalid input
+      }
+    }
+
+    // Clear any existing feedback immediately
+    setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+
+    initializeAudio();
+    playSound('submit');
+
+    // Check if the answer is correct
+    let isCorrect = false;
+    let correctAnswerText = '';
+    
+    // Check against all accepted answers - accept factors in any order
+    for (let answer of detectiveClue.acceptedAnswers) {
+      // Check if the input matches the expected answer in either order
+      if ((factor1 === answer[0] && factor2 === answer[1]) || 
+          (factor1 === answer[1] && factor2 === answer[0])) {
+        isCorrect = true;
+        break;
+      }
+    }
+    
+    // Format correct answer text for feedback - show all valid combinations
+    if (detectiveClue.acceptedAnswers.length === 1) {
+      const ans = detectiveClue.acceptedAnswers[0];
+      // For single answers, show both possible orders if they're different
+      if (ans[0] === ans[1]) {
+        correctAnswerText = `${ans[0]} × ${ans[1]} = ${ans[0] * ans[1]}`;
+      } else {
+        correctAnswerText = `${ans[0]} × ${ans[1]} (or ${ans[1]} × ${ans[0]}) = ${ans[0] * ans[1]}`;
+      }
+    } else {
+      // For multiple answers, show all combinations
+      const answerTexts = detectiveClue.acceptedAnswers.map(ans => {
+        if (ans[0] === ans[1]) {
+          return `${ans[0]} × ${ans[1]}`;
+        } else {
+          return `${ans[0]} × ${ans[1]} or ${ans[1]} × ${ans[0]}`;
+        }
+      });
+      correctAnswerText = answerTexts.join(', ');
+    }
+    
+    // Track answer submission
+    trackEvent('detective_answer', 'Gameplay', `Detective - ${isCorrect ? 'Correct' : 'Incorrect'}`);
+    
+    setScore(prev => ({
+      correct: prev.correct + (isCorrect ? 1 : 0),
+      total: prev.total + 1
+    }));
+
+    setTimeout(() => {
+      if (isCorrect) {
+        playSound('correct');
+        const detectiveMessages = [
+          `🕵️ Case solved, Detective ${userName}!`,
+          `🔍 Brilliant deduction, ${userName}!`,
+          `🎯 Mystery cracked, Detective ${userName}!`,
+          `⚡ Sharp investigation, ${userName}!`,
+          `🏆 Master detective work, ${userName}!`,
+          `🧠 Clever reasoning, Detective ${userName}!`,
+          `✨ Outstanding detective, ${userName}!`,
+          `🎉 Another case closed, ${userName}!`,
+          `🌟 Superb sleuthing, Detective ${userName}!`,
+          `🚀 Detective genius, ${userName}!`
+        ];
+        const randomMessage = detectiveMessages[Math.floor(Math.random() * detectiveMessages.length)];
+        setFeedback({ show: true, correct: true, message: randomMessage, correctAnswer: correctAnswerText });
+      } else {
+        playSound('incorrect');
+        const helpfulMessages = [
+          '🤔 This clue needs more investigation!',
+          '🔍 Check your detective work again!',
+          '💭 Good attempt, keep investigating!',
+          '🎯 The mystery continues!',
+          '💡 Try a different angle, detective!',
+          '🧐 This case is tricky!',
+          '⚡ Keep those detective skills sharp!',
+          '🌱 Every detective learns from each case!'
+        ];
+        const randomMessage = helpfulMessages[Math.floor(Math.random() * helpfulMessages.length)];
+        setFeedback({ show: true, correct: false, message: randomMessage, correctAnswer: correctAnswerText });
+      }
+    }, 150);
+
+    // Clear input fields
+    setDetectiveInput({ factor1: '', factor2: '' });
+    
+    // Generate new clue after feedback period
+    setTimeout(() => {
+      setFeedback({ show: false, correct: false, message: '', correctAnswer: '' });
+      if (gameActive) {
+        // Check if we've reached the maximum number of questions
+        if (detectiveQuestionCount >= detectiveMaxQuestions) {
+          // End the game
+          endGame();
+        } else {
+          // Move to next question
+          setDetectiveQuestionCount(prev => prev + 1);
+          generateDetectiveClue();
+        }
+      }
+    }, isCorrect ? 1500 : 2500);
   };
 
   const submitAnswer = () => {
@@ -1008,6 +1267,11 @@ function App() {
     setTimeLeft(60);
     setGameActive(false);
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    
+    // Reset detective-specific state
+    setDetectiveQuestionCount(0);
+    setDetectiveInput({ factor1: '', factor2: '' });
+    setDetectiveClue({ type: '', clue: '', acceptedAnswers: [], prefilledFactor: null, prefilledPosition: null });
   };
 
   const clearHistory = (mode) => {
@@ -1063,24 +1327,63 @@ function App() {
         <div className="floating-demon">👹</div>
         <div className="menu-container">
           <h1>Multiply Monsters</h1>
-          <p>🎉 Hi {userName}! Ready to battle math monsters and become a multiplication master? 🦸‍♂️</p>
-          <div className="menu-buttons">
-            <button className="mode-button" onClick={startUnlimited}>
-              🐉 Monster Training Mode
-              <span className="mode-description">Train with friendly monsters (facts up to 12)</span>
-            </button>
-            <button className="mode-button" onClick={startTimed}>
-              ⏱️ Monster Race (60s)
-              <span className="mode-description">Race against time with speedy monsters!</span>
-            </button>
-            <button className="mode-button advanced" onClick={startAdvanced}>
-              👺 Boss Monster Battle (60s)
-              <span className="mode-description">Fight the ultimate math boss monsters!</span>
-            </button>
-            <button className="mode-button multiplayer" onClick={() => setGameMode('multiplayerSelect')}>
-              👥 Classroom Battle Mode
-              <span className="mode-description">Join or create a classroom session!</span>
-            </button>
+          <p>🎉 Hi {userName}! Choose your adventure! 🦸‍♂️</p>
+          
+          <div className="game-modes-grid">
+            <div className="mode-section">
+              <h3 className="section-title">🎮 Solo Adventures</h3>
+              <div className="mode-cards">
+                <button className="mode-card training" onClick={startUnlimited}>
+                  <div className="card-icon">🐉</div>
+                  <div className="card-content">
+                    <h4>Training</h4>
+                    <p>Practice basics</p>
+                  </div>
+                </button>
+                
+                <button className="mode-card detective" onClick={startDetective}>
+                  <div className="card-icon">🕵️</div>
+                  <div className="card-content">
+                    <h4>Detective</h4>
+                    <p>Solve mysteries</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+            
+            <div className="mode-section">
+              <h3 className="section-title">⚡ Timed Challenges</h3>
+              <div className="mode-cards">
+                <button className="mode-card timed" onClick={startTimed}>
+                  <div className="card-icon">⏱️</div>
+                  <div className="card-content">
+                    <h4>Monster Race</h4>
+                    <p>60-second sprint</p>
+                  </div>
+                </button>
+                
+                <button className="mode-card advanced" onClick={startAdvanced}>
+                  <div className="card-icon">👺</div>
+                  <div className="card-content">
+                    <h4>Boss Battle</h4>
+                    <p>Ultimate challenge</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+            
+            <div className="mode-section">
+              <h3 className="section-title">🏫 Classroom</h3>
+              <div className="mode-cards">
+                <button className="mode-card multiplayer" onClick={() => setGameMode('multiplayerSelect')}>
+                  <div className="card-icon">👥</div>
+                  <div className="card-content">
+                    <h4>Battle Mode</h4>
+                    <p>Join or host session</p>
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1761,76 +2064,168 @@ function App() {
         </div>
       )}
       
-      <div className="game-container">
-        <div className="game-header">
-          <div className="compact-game-stats">
-            {(gameMode === 'timed' || gameMode === 'advanced') && (
-              <span className="timer">⏳ {timeLeft}s</span>
+      {gameMode === 'detective' ? (
+        <div className="detective-container">
+          <div className="game-header">
+            <div className="compact-game-stats">
+              <span className="detective-progress">
+                📋 Case {detectiveQuestionCount} of {detectiveMaxQuestions}
+              </span>
+            </div>
+          </div>
+          
+          <div className="detective-clue-container">
+            {!feedback.show && (
+              <div className="detective-clue">
+                {detectiveClue.clue}
+              </div>
             )}
-            <span className="score">
-              🏆 {score.correct}/{score.total}
-              {isMultiplayer && currentStreak > 0 && (
-                <span className="streak"> 🔥{currentStreak}</span>
-              )}
-            </span>
-            {isMultiplayer && (
-              <span className="session-indicator">📋 {sessionCode}</span>
+            
+            {feedback.show && (
+              <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
+                <div className="feedback-message">{feedback.message}</div>
+                {!feedback.correct && (
+                  <div className="correct-answer">
+                    The correct answer is {feedback.correctAnswer}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {!feedback.show && (
+              <div className="detective-inputs">
+                <div className="factor-inputs">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={detectiveClue.prefilledPosition === 1 ? detectiveClue.prefilledFactor : detectiveInput.factor1}
+                    onChange={(e) => {
+                      if (detectiveClue.prefilledPosition !== 1) {
+                        setDetectiveInput(prev => ({ ...prev, factor1: e.target.value }));
+                      }
+                    }}
+                    className={`detective-input ${detectiveClue.prefilledPosition === 1 ? 'prefilled' : ''}`}
+                    placeholder="First number"
+                    min="1"
+                    max="12"
+                    readOnly={detectiveClue.prefilledPosition === 1}
+                  />
+                  <span className="multiplication-symbol">×</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={detectiveClue.prefilledPosition === 2 ? detectiveClue.prefilledFactor : detectiveInput.factor2}
+                    onChange={(e) => {
+                      if (detectiveClue.prefilledPosition !== 2) {
+                        setDetectiveInput(prev => ({ ...prev, factor2: e.target.value }));
+                      }
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && submitDetectiveAnswer()}
+                    className={`detective-input ${detectiveClue.prefilledPosition === 2 ? 'prefilled' : ''}`}
+                    placeholder="Second number"
+                    min="1"
+                    max="12"
+                    readOnly={detectiveClue.prefilledPosition === 2}
+                  />
+                </div>
+                <button 
+                  onClick={submitDetectiveAnswer} 
+                  className="submit-button detective-submit"
+                  disabled={
+                    detectiveClue.type === 'divisionPrep' 
+                      ? (detectiveClue.prefilledPosition === 1 ? !detectiveInput.factor2 : !detectiveInput.factor1)
+                      : (!detectiveInput.factor1 || !detectiveInput.factor2)
+                  }
+                >
+                  🔍 Solve Case!
+                </button>
+              </div>
             )}
           </div>
-        </div>
-        
 
-        <div className="question-container">
-          {/* In multiplayer, only show question when feedback is not showing */}
-          {(!isMultiplayer || (isMultiplayer && !feedback.show)) && (
-            <div className="question">
-              {currentQuestion.a} × {currentQuestion.b} = ?
-            </div>
-          )}
-          
-          {feedback.show && (
-            <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
-              <div className="feedback-message">{feedback.message}</div>
-              {!feedback.correct && (
-                <div className="correct-answer">
-                  The correct answer is {feedback.correctAnswer}
-                </div>
+          <div className="game-controls">
+            <button onClick={endGame} className="done-button">
+              🎆 Close Detective Agency!
+            </button>
+            <button onClick={backToMenu} className="back-button">
+              🏠 Return to Kingdom
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="game-container">
+          <div className="game-header">
+            <div className="compact-game-stats">
+              {(gameMode === 'timed' || gameMode === 'advanced') && (
+                <span className="timer">⏳ {timeLeft}s</span>
+              )}
+              <span className="score">
+                🏆 {score.correct}/{score.total}
+                {isMultiplayer && currentStreak > 0 && (
+                  <span className="streak"> 🔥{currentStreak}</span>
+                )}
+              </span>
+              {isMultiplayer && (
+                <span className="session-indicator">📋 {sessionCode}</span>
               )}
             </div>
-          )}
+          </div>
           
-          {!feedback.show && (
-            <>
-              <input
-                ref={answerInputRef}
-                type="number"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="answer-input"
-                placeholder="Your answer"
-                autoFocus
-              />
-              <button onClick={submitAnswer} className="submit-button">
-                ⚔️ Attack Monster!
-              </button>
-            </>
-          )}
-        </div>
 
-        <div className="game-controls">
-          {gameMode === 'unlimited' && (
-            <button onClick={endGame} className="done-button">
-              🎆 Victory Celebration!
+          <div className="question-container">
+            {/* In multiplayer, only show question when feedback is not showing */}
+            {(!isMultiplayer || (isMultiplayer && !feedback.show)) && (
+              <div className="question">
+                {currentQuestion.a} × {currentQuestion.b} = ?
+              </div>
+            )}
+            
+            {feedback.show && (
+              <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
+                <div className="feedback-message">{feedback.message}</div>
+                {!feedback.correct && (
+                  <div className="correct-answer">
+                    The correct answer is {feedback.correctAnswer}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {!feedback.show && (
+              <>
+                <input
+                  ref={answerInputRef}
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="answer-input"
+                  placeholder="Your answer"
+                  autoFocus
+                />
+                <button onClick={submitAnswer} className="submit-button">
+                  ⚔️ Attack Monster!
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="game-controls">
+            {gameMode === 'unlimited' && (
+              <button onClick={endGame} className="done-button">
+                🎆 Victory Celebration!
+              </button>
+            )}
+            <button onClick={backToMenu} className="back-button">
+              🏠 Return to Kingdom
             </button>
-          )}
-          <button onClick={backToMenu} className="back-button">
-            🏠 Return to Kingdom
-          </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

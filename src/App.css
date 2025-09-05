@@ -1678,3 +1678,370 @@ body:has(input:focus) .mode-button::before {
   background: #4b5563;
   transform: scale(1.05);
 }
+
+/* Monster Detective Mode Styles */
+.detective-container {
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+  border-radius: 30px;
+  padding: 40px;
+  border: 3px solid rgba(123, 104, 238, 0.3);
+  box-shadow: 
+    0 25px 50px rgba(123, 104, 238, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  max-width: 600px;
+  width: 90%;
+  margin: 0 20px;
+  position: relative;
+  z-index: 1;
+  animation: none;
+  transform: translateZ(0);
+  will-change: box-shadow;
+}
+
+.mode-button.detective {
+  background: #7b68ee;
+  border-color: #6a5acd;
+  color: #ffffff;
+}
+
+.mode-button.detective:hover {
+  background: #9370db;
+  border-color: #8a2be2;
+}
+
+.detective-clue-container {
+  margin-bottom: 30px;
+}
+
+.detective-clue {
+  font-size: 1.8rem;
+  color: #7b68ee;
+  margin-bottom: 30px;
+  font-weight: bold;
+  padding: 25px;
+  background: linear-gradient(135deg, rgba(123, 104, 238, 0.1), rgba(106, 90, 205, 0.1));
+  border-radius: 20px;
+  border: 2px solid rgba(123, 104, 238, 0.3);
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(123, 104, 238, 0.1);
+}
+
+.detective-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.factor-inputs {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.detective-input {
+  font-size: 1.4rem;
+  padding: 15px 20px;
+  border: 3px solid #7b68ee;
+  border-radius: 15px;
+  text-align: center;
+  width: 120px;
+  font-family: inherit;
+  background: white;
+  will-change: contents;
+  transform: translateZ(0);
+}
+
+.detective-input::placeholder {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.detective-input:focus {
+  outline: none;
+  border-color: #9370db;
+  box-shadow: 0 0 10px rgba(123, 104, 238, 0.3);
+}
+
+.detective-input.prefilled {
+  background: linear-gradient(135deg, #e8f5e8, #d4edda);
+  border-color: #28a745;
+  color: #155724;
+  font-weight: bold;
+  cursor: not-allowed;
+}
+
+.detective-input.prefilled:focus {
+  outline: none;
+  border-color: #28a745;
+  box-shadow: 0 0 10px rgba(40, 167, 69, 0.3);
+}
+
+.multiplication-symbol {
+  font-size: 2rem;
+  color: #7b68ee;
+  font-weight: bold;
+  margin: 0 5px;
+}
+
+.detective-submit {
+  background: #7b68ee;
+  border-color: #6a5acd;
+}
+
+.detective-submit:hover:not(:disabled) {
+  background: #9370db;
+  transform: translateY(-1px);
+}
+
+.detective-submit:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.detective-submit:disabled:hover {
+  background: #bdc3c7;
+  transform: none;
+}
+
+.detective-progress {
+  background: white;
+  color: #7b68ee;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 2px solid #7b68ee;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mobile optimizations for Detective Mode */
+@media (max-width: 768px) {
+  .detective-container {
+    padding: 30px 20px;
+    max-width: 95%;
+    margin: 0 10px;
+  }
+  
+  .detective-clue {
+    font-size: 1.4rem;
+    padding: 20px 15px;
+  }
+  
+  .factor-inputs {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .detective-input {
+    width: 150px;
+    font-size: 1.2rem;
+  }
+  
+  .multiplication-symbol {
+    font-size: 1.5rem;
+    margin: 5px 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .detective-clue {
+    font-size: 1.2rem;
+    padding: 15px 10px;
+  }
+  
+  .detective-input {
+    width: 120px;
+    padding: 12px 15px;
+  }
+}
+
+/* New Card-Based Menu Layout */
+.game-modes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  margin-top: 20px;
+}
+
+.mode-section {
+  text-align: center;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  color: #667eea;
+  margin: 0 0 15px 0;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.mode-cards {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.mode-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 3px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px 16px;
+  width: 160px;
+  height: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: visible;
+}
+
+.mode-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.card-content {
+  text-align: center;
+}
+
+.card-content h4 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #374151;
+  line-height: 1.2;
+}
+
+.card-content p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+  line-height: 1.2;
+}
+
+/* Card-specific colors */
+.mode-card.training {
+  border-color: #10b981;
+}
+
+.mode-card.training:hover {
+  border-color: #059669;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+}
+
+.mode-card.detective {
+  border-color: #7b68ee;
+}
+
+.mode-card.detective:hover {
+  border-color: #6a5acd;
+  background: linear-gradient(135deg, #f3f0ff 0%, #e5dbff 100%);
+}
+
+.mode-card.timed {
+  border-color: #f59e0b;
+}
+
+.mode-card.timed:hover {
+  border-color: #d97706;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+
+.mode-card.advanced {
+  border-color: #dc2626;
+}
+
+.mode-card.advanced:hover {
+  border-color: #b91c1c;
+  background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+}
+
+.mode-card.multiplayer {
+  border-color: #3b82f6;
+}
+
+.mode-card.multiplayer:hover {
+  border-color: #2563eb;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+}
+
+/* Mobile responsive for card layout */
+@media (max-width: 768px) {
+  .game-modes-grid {
+    gap: 20px;
+  }
+  
+  .mode-cards {
+    gap: 12px;
+  }
+  
+  .mode-card {
+    width: 140px;
+    height: 110px;
+    padding: 20px 12px;
+  }
+  
+  .card-icon {
+    font-size: 2rem;
+  }
+  
+  .card-content h4 {
+    font-size: 0.9rem;
+  }
+  
+  .card-content p {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .mode-cards {
+    gap: 10px;
+  }
+  
+  .mode-card {
+    width: 120px;
+    height: 95px;
+    padding: 16px 10px;
+  }
+  
+  .card-icon {
+    font-size: 1.8rem;
+  }
+  
+  .card-content h4 {
+    font-size: 0.8rem;
+  }
+  
+  .card-content p {
+    font-size: 0.7rem;
+  }
+}
