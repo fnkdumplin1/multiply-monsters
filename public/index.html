@@ -2,16 +2,30 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <!-- Favicon for modern browsers -->
     <link rel="icon" href="%PUBLIC_URL%/favicon.svg" type="image/svg+xml" />
-    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>👾</text></svg>" />
+    <!-- Fallback favicon for older browsers -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <!-- Additional favicon sizes for better compatibility -->
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#ff6b35" />
     <meta
       name="description"
       content="Multiply Monsters - A fun monster-themed multiplication training game for kids"
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Multiply Monsters">
+    <meta property="og:description" content="A fun monster-themed multiplication training game for kids">
+    <meta property="og:image" content="%PUBLIC_URL%/android-chrome-512x512.png">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:title" content="Multiply Monsters">
+    <meta property="twitter:description" content="A fun monster-themed multiplication training game for kids">
+    <meta property="twitter:image" content="%PUBLIC_URL%/android-chrome-512x512.png">
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
     <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
@@ -27,6 +41,11 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>Multiply Monsters</title>
+    
+    <!-- Google Fonts - Hanken Grotesk -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-PH0YDD16BG"></script>

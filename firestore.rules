@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Secure rules for sessions collection
+    match /sessions/{sessionId} {
+      // Anyone can read sessions (needed for students to join)
+      allow read: if true;
+
+      // Create sessions with validation
+      allow create: if sessionId.matches('^[A-Z0-9]{4}$')
+                    && resource.data.code == sessionId
+                    && resource.data.teacherName is string
+                    && resource.data.teacherName.size() > 0
+                    && resource.data.teacherName.size() <= 50;
+
+      // Update sessions with basic protection
+      allow update: if resource.data.code == sessionId
+                    && request.resource.data.code == sessionId
+                    && request.resource.data.teacherName == resource.data.teacherName;
+
+      // Allow deletion for cleanup
+      allow delete: if true;
+    }
+
+    // Secure rules for squadBattles collection
+    match /squadBattles/{battleId} {
+      // Anyone can read squad battles (needed for players to join)
+      allow read: if true;
+
+      // Create squad battles with validation
+      allow create: if battleId.matches('^[A-Z0-9]{3}$')
+                    && request.resource.data.code == battleId
+                    && request.resource.data.hostName is string
+                    && request.resource.data.hostName.size() > 0
+                    && request.resource.data.hostName.size() <= 50;
+
+      // Update squad battles with basic protection
+      allow update: if resource.data.code == battleId
+                    && request.resource.data.code == battleId;
+
+      // Allow deletion for cleanup
+      allow delete: if true;
+    }
+
+    // Deny access to all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,18 +1,100 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
-import { 
-  createSession, 
-  joinSession, 
+import {
+  createSession,
+  joinSession,
   leaveSession,
-  updateStudentScore, 
-  startSession, 
-  subscribeToSession 
+  updateStudentScore,
+  startSession,
+  subscribeToSession,
+  createSquadBattle,
+  joinSquadBattle,
+  leaveSquadBattle,
+  updatePlayerReady,
+  startSquadBattle,
+  updateSquadPlayerScore,
+  eliminatePlayer,
+  listenToSquadBattle
 } from './multiplayerUtils';
 
 function App() {
   const [gameMode, setGameMode] = useState('nameInput');
   const [userName, setUserName] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState({ a: 0, b: 0 });
+  
+  // App version and changelog
+  const APP_VERSION = 'v3.0.1';
+  const CHANGELOG = [
+    {
+      version: 'v3.0.1',
+      date: '11-04-2025',
+      features: [
+        'Enhanced Detective Mode randomization with crypto-secure random generation',
+        'Expanded factor range to 0-12 (previously 1-12) for zero property education',
+        'Dynamic product generation with 169 possible combinations (up from 11)',
+        'Special zero multiplication logic: 0 × any number = 0 accepts all valid answers',
+        'Manual dismiss for wrong answers - users control when to advance',
+        'Improved feedback display with "Next Question" button for learning review',
+        'Fixed input validation to properly support zero as a factor'
+      ]
+    },
+    {
+      version: 'v3.0.0',
+      date: '09-30-2025',
+      features: [
+        'Monster Squad Showdown: Student-led peer battles',
+        'Quick Clash: 3-minute speed battle mode with real-time leaderboards',
+        'Survival Mode: Last player standing elimination game',
+        'Color-coded battle themes (Blue for Quick Clash, Red for Survival)',
+        'Countdown audio warnings for last 5 seconds',
+        'Battle end sound effects and improved Firebase security'
+      ]
+    },
+    {
+      version: 'v2.1.2',
+      date: '09-28-2025',
+      features: [
+        'Smart name validation requiring first and last name',
+        '10 funny validation messages to encourage real names',
+        'In-app error display with shake animation (no more browser alerts)',
+        'Visual guidelines and examples for proper name entry',
+        'Improved classroom management through student identification'
+      ]
+    },
+    {
+      version: 'v2.1.1',
+      date: '09-05-2025',
+      features: [
+        'Version history and changelog screen',
+        'Unified card border radius (10px) and increased border width',
+        'Improved feedback message text contrast (white text)',
+        'Consistent height alignment for input fields and buttons',
+        'Added copyright footer with automatic year increment'
+      ]
+    },
+    {
+      version: 'v2.1.0',
+      date: '09-04-2025',
+      features: [
+        'Monster Detective mode with 5 clue types',
+        'Division preparation variant with prefilled inputs',
+        'Compact card-based home screen design',
+        'Design system implementation with Hanken Grotesk font',
+        'Enhanced favicon and social sharing support'
+      ]
+    },
+    {
+      version: 'v2.0.0',
+      date: '08-31-2025',
+      features: [
+        'Firebase multiplayer classroom battle mode',
+        'Real-time teacher monitoring and leaderboards',
+        'Countdown timer system for session synchronization',
+        'Advanced audio system with multiple sound variations',
+        'Teacher guide integration for classroom usage'
+      ]
+    }
+  ];
   const [userAnswer, setUserAnswer] = useState('');
   
   // Monster Detective mode states
@@ -41,9 +123,29 @@ function App() {
   const [isJoining, setIsJoining] = useState(false);
   const [gameStartTime, setGameStartTime] = useState(null);
   const questionTimeoutRef = useRef(null);
-  
+
+  // Squad Battle states
+  const [isSquadBattle, setIsSquadBattle] = useState(false);
+  const [squadCode, setSquadCode] = useState('');
+  const [squadData, setSquadData] = useState(null);
+  const [squadBattleType, setSquadBattleType] = useState('quickClash'); // 'quickClash', 'epicDuel', 'survival'
+  const [isSquadHost, setIsSquadHost] = useState(false);
+  const [squadUnsubscribe, setSquadUnsubscribe] = useState(null);
+  const [playersReady, setPlayersReady] = useState(new Set());
+  const [isPlayerReady, setIsPlayerReady] = useState(false);
+  const [squadInputCode, setSquadInputCode] = useState('');
+  const [isJoiningSquad, setIsJoiningSquad] = useState(false);
+  const [isCreatingSquad, setIsCreatingSquad] = useState(false);
+
+  // Survival mode specific states
+  const [playerLives, setPlayerLives] = useState(3); // Each player starts with 3 lives
+  const [isEliminated, setIsEliminated] = useState(false);
+
   // Audio initialization state for Safari
   const [audioInitialized, setAudioInitialized] = useState(false);
+
+  // Name validation state
+  const [nameError, setNameError] = useState('');
 
   // Countdown states
   const [countdown, setCountdown] = useState(null);
@@ -626,50 +728,66 @@ function App() {
   // Monster Detective clue generation
   const generateDetectiveClue = () => {
     console.log(`🕵️ Generating detective clue for ${userName}`);
-    
+
     // Clear previous inputs and prefilled state
     setDetectiveInput({ factor1: '', factor2: '' });
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
-    
+
+    // Helper function for better randomization (0-12 range)
+    const getRandomFactor = () => {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const array = new Uint32Array(1);
+        window.crypto.getRandomValues(array);
+        return array[0] % 13; // 0-12
+      }
+      return Math.floor(Math.random() * 13); // 0-12
+    };
+
     const clueTypes = ['product', 'missingFactor', 'factorRange', 'factorProperty', 'divisionPrep'];
     const selectedType = clueTypes[Math.floor(Math.random() * clueTypes.length)];
-    
+
     let clue = '';
     let acceptedAnswers = [];
     let prefilledFactor = null;
     let prefilledPosition = null;
-    
+
     if (selectedType === 'product') {
-      // Generate a product with multiple factor pairs
-      const products = [12, 18, 20, 24, 30, 36, 40, 42, 48, 60, 72];
-      const product = products[Math.floor(Math.random() * products.length)];
-      
-      // Find all factor pairs for this product (within 1-12 range)
+      // Generate a product dynamically instead of from a fixed list
+      // Use two random factors to create more variety
+      const factor1 = getRandomFactor();
+      const factor2 = getRandomFactor();
+      const product = factor1 * factor2;
+
+      // Find all factor pairs for this product (within 0-12 range)
       acceptedAnswers = [];
-      for (let i = 1; i <= 12; i++) {
-        if (product % i === 0 && product / i <= 12) {
-          const factor2 = product / i;
-          if (i <= factor2) { // Avoid duplicates like 3×4 and 4×3
-            acceptedAnswers.push([i, factor2]);
+      for (let i = 0; i <= 12; i++) {
+        for (let j = i; j <= 12; j++) {
+          if (i * j === product) {
+            acceptedAnswers.push([i, j]);
           }
         }
       }
-      
-      clue = `🔍 My product is ${product}. What two numbers can you multiply to get ${product}?`;
-      
+
+      // If product is 0, make the clue clearer
+      if (product === 0) {
+        clue = `My product is ${product}. What two numbers can you multiply to get ${product}? (Hint: one must be 0)`;
+      } else {
+        clue = `My product is ${product}. What two numbers can you multiply to get ${product}?`;
+      }
+
     } else if (selectedType === 'missingFactor') {
-      const factor1 = Math.floor(Math.random() * 12) + 1;
-      const factor2 = Math.floor(Math.random() * 12) + 1;
+      const factor1 = getRandomFactor();
+      const factor2 = getRandomFactor();
       const product = factor1 * factor2;
-      
-      clue = `🔍 I multiplied ${factor1} by another number and got ${product}. What was the other number?`;
+
+      clue = `I multiplied ${factor1} by another number and got ${product}. What was the other number?`;
       acceptedAnswers = [[factor1, factor2]]; // Only one correct answer
-      
+
     } else if (selectedType === 'factorRange') {
-      // Both factors between certain ranges
-      const minRange = Math.floor(Math.random() * 6) + 3; // 3-8
-      const maxRange = minRange + 3; // Range of 3 numbers
-      
+      // Both factors between certain ranges with more variety
+      const minRange = Math.floor(Math.random() * 9); // 0-8
+      const maxRange = Math.min(12, minRange + Math.floor(Math.random() * 5) + 2); // Range of 2-6 numbers
+
       const validPairs = [];
       for (let i = minRange; i <= maxRange && i <= 12; i++) {
         for (let j = i; j <= maxRange && j <= 12; j++) {
@@ -678,57 +796,57 @@ function App() {
           }
         }
       }
-      
+
       if (validPairs.length > 0) {
         const selected = validPairs[Math.floor(Math.random() * validPairs.length)];
-        clue = `🔍 Both my factors are between ${minRange} and ${maxRange}, and my product is ${selected[2]}. What are my factors?`;
+        clue = `Both my factors are between ${minRange} and ${maxRange}, and my product is ${selected[2]}. What are my factors?`;
         acceptedAnswers = [[selected[0], selected[1]]];
       } else {
         // Fallback to simpler clue
         return generateDetectiveClue();
       }
-      
+
     } else if (selectedType === 'factorProperty') {
       const isEvenClue = Math.random() > 0.5;
-      const knownFactor = Math.floor(Math.random() * 12) + 1;
-      
+      const knownFactor = getRandomFactor();
+
       let unknownFactor;
       if (isEvenClue) {
         // Unknown factor is even
-        const evenFactors = [2, 4, 6, 8, 10, 12];
+        const evenFactors = [0, 2, 4, 6, 8, 10, 12];
         unknownFactor = evenFactors[Math.floor(Math.random() * evenFactors.length)];
       } else {
-        // Unknown factor is odd  
+        // Unknown factor is odd
         const oddFactors = [1, 3, 5, 7, 9, 11];
         unknownFactor = oddFactors[Math.floor(Math.random() * oddFactors.length)];
       }
-      
+
       const product = knownFactor * unknownFactor;
-      clue = `🔍 One factor is ${isEvenClue ? 'even' : 'odd'}, the other is ${knownFactor}, and the product is ${product}. What's the ${isEvenClue ? 'even' : 'odd'} factor?`;
+      clue = `One factor is ${isEvenClue ? 'even' : 'odd'}, the other is ${knownFactor}, and the product is ${product}. What's the ${isEvenClue ? 'even' : 'odd'} factor?`;
       acceptedAnswers = [[Math.min(knownFactor, unknownFactor), Math.max(knownFactor, unknownFactor)]];
-      
+
     } else if (selectedType === 'divisionPrep') {
       // Division prep: give one factor and the product, ask for the other factor
-      const factor1 = Math.floor(Math.random() * 12) + 1;
-      const factor2 = Math.floor(Math.random() * 12) + 1;
+      const factor1 = getRandomFactor();
+      const factor2 = getRandomFactor();
       const product = factor1 * factor2;
-      
+
       // Randomly choose which factor to give (position 1 or 2)
       const giveFirstFactor = Math.random() > 0.5;
-      
+
       if (giveFirstFactor) {
         prefilledFactor = factor1;
         prefilledPosition = 1;
-        clue = `🔍 My first number is ${factor1} and my product is ${product}. What's my second number?`;
+        clue = `My first number is ${factor1} and my product is ${product}. What's my second number?`;
         acceptedAnswers = [[factor1, factor2]];
       } else {
         prefilledFactor = factor2;
         prefilledPosition = 2;
-        clue = `🔍 My second number is ${factor2} and my product is ${product}. What's my first number?`;
+        clue = `My second number is ${factor2} and my product is ${product}. What's my first number?`;
         acceptedAnswers = [[factor1, factor2]];
       }
     }
-    
+
     setDetectiveClue({ type: selectedType, clue, acceptedAnswers, prefilledFactor, prefilledPosition });
     console.log(`✅ Detective clue generated:`, { type: selectedType, clue, acceptedAnswers });
   };
@@ -815,13 +933,81 @@ function App() {
     }, 100); // Small delay to ensure DOM updates
   };
 
-  const handleNameSubmit = () => {
-    if (userName.trim()) {
-      initializeAudio(); // Initialize audio on first interaction
-      playSound('click');
-      trackEvent('user_registered', 'Engagement', 'Name Entered');
-      setGameMode('menu');
+  const validateName = (name) => {
+    const trimmedName = name.trim();
+
+    // Check minimum length
+    if (trimmedName.length < 2) {
+      return { valid: false, error: "Please enter at least 2 characters" };
     }
+
+    // Check for numbers
+    if (/\d/.test(trimmedName)) {
+      return { valid: false, error: "Please don't use numbers in your name" };
+    }
+
+    // Check for special characters (allow spaces, hyphens, apostrophes)
+    if (!/^[a-zA-Z\s\-']+$/.test(trimmedName)) {
+      return { valid: false, error: "Please use only letters, spaces, hyphens, and apostrophes" };
+    }
+
+    // Check for minimum 2 words (first and last name)
+    const words = trimmedName.split(/\s+/).filter(word => word.length > 0);
+    if (words.length < 2) {
+      return { valid: false, error: "Please enter your first and last name" };
+    }
+
+    // Check for obviously fake names
+    const fakeNames = [
+      'butt', 'poop', 'pee', 'fart', 'stupid', 'dumb', 'hate', 'kill',
+      'death', 'die', 'dead', 'gun', 'knife', 'bomb', 'test', 'asdf',
+      'qwerty', 'aaaa', 'bbbb', 'cccc', 'dddd', 'eeee', 'ffff',
+      'john doe', 'jane doe', 'mickey mouse', 'donald duck'
+    ];
+
+    const funnyMessages = [
+      "Nice try, but your teacher needs to know who you really are! 😄",
+      "Your secret identity is safe, but use your real name here! 🦸‍♀️",
+      "That's a creative name, but let's go with your actual one! 🎭",
+      "I see what you did there... but your teacher won't! Use your real name! 👀",
+      "Your parents didn't name you that! Try your actual name! 👨‍👩‍👧‍👦",
+      "Plot twist: your teacher can't give you credit if they don't know who you are! 📚",
+      "Your real name is way cooler than that! Trust me! ⭐",
+      "Your teacher's detective skills aren't that good - help them out with your real name! 🕵️‍♀️",
+      "That name would be awesome for a video game character, but not for math class! 🎮",
+      "I'm sure that's a great superhero name, but let's stick to reality! 🦸‍♂️"
+    ];
+
+    const lowerName = trimmedName.toLowerCase();
+    for (const fake of fakeNames) {
+      if (lowerName.includes(fake)) {
+        const randomMessage = funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
+        return { valid: false, error: randomMessage };
+      }
+    }
+
+    // Check for repeated characters (like "aaaa bbbb")
+    if (/(.)\1{3,}/.test(trimmedName)) {
+      const randomMessage = funnyMessages[Math.floor(Math.random() * funnyMessages.length)];
+      return { valid: false, error: randomMessage };
+    }
+
+    return { valid: true };
+  };
+
+  const handleNameSubmit = () => {
+    const validation = validateName(userName);
+
+    if (!validation.valid) {
+      setNameError(validation.error);
+      return;
+    }
+
+    setNameError(''); // Clear any previous errors
+    initializeAudio(); // Initialize audio on first interaction
+    playSound('click');
+    trackEvent('user_registered', 'Engagement', 'Name Entered');
+    setGameMode('menu');
   };
 
   const handleNameKeyPress = (e) => {
@@ -904,7 +1090,7 @@ function App() {
   const submitDetectiveAnswer = () => {
     let factor1 = parseInt(detectiveInput.factor1);
     let factor2 = parseInt(detectiveInput.factor2);
-    
+
     // For division prep, use prefilled factor if available
     if (detectiveClue.prefilledFactor !== null) {
       if (detectiveClue.prefilledPosition === 1) {
@@ -913,16 +1099,16 @@ function App() {
         factor2 = detectiveClue.prefilledFactor;
       }
     }
-    
+
     // For division prep, we only need to check the non-prefilled input
     if (detectiveClue.type === 'divisionPrep') {
       const nonPrefilledInput = detectiveClue.prefilledPosition === 1 ? factor2 : factor1;
-      if (!nonPrefilledInput || nonPrefilledInput < 1 || nonPrefilledInput > 12) {
+      if (isNaN(nonPrefilledInput) || nonPrefilledInput < 0 || nonPrefilledInput > 12) {
         return; // Invalid input
       }
     } else {
-      // For other clue types, check both inputs
-      if (!factor1 || !factor2 || factor1 < 1 || factor2 < 1 || factor1 > 12 || factor2 > 12) {
+      // For other clue types, check both inputs (0-12 range)
+      if (isNaN(factor1) || isNaN(factor2) || factor1 < 0 || factor2 < 0 || factor1 > 12 || factor2 > 12) {
         return; // Invalid input
       }
     }
@@ -936,14 +1122,24 @@ function App() {
     // Check if the answer is correct
     let isCorrect = false;
     let correctAnswerText = '';
-    
-    // Check against all accepted answers - accept factors in any order
-    for (let answer of detectiveClue.acceptedAnswers) {
-      // Check if the input matches the expected answer in either order
-      if ((factor1 === answer[0] && factor2 === answer[1]) || 
-          (factor1 === answer[1] && factor2 === answer[0])) {
-        isCorrect = true;
-        break;
+
+    // Special case: If one of the expected factors is 0 and product is 0,
+    // then any valid number (0-12) for the other factor is correct
+    const product = factor1 * factor2;
+    const hasZeroFactor = detectiveClue.acceptedAnswers.some(ans => ans[0] === 0 || ans[1] === 0);
+
+    if (hasZeroFactor && product === 0) {
+      // Any valid input is correct when multiplying by 0
+      isCorrect = true;
+    } else {
+      // Check against all accepted answers - accept factors in any order
+      for (let answer of detectiveClue.acceptedAnswers) {
+        // Check if the input matches the expected answer in either order
+        if ((factor1 === answer[0] && factor2 === answer[1]) ||
+            (factor1 === answer[1] && factor2 === answer[0])) {
+          isCorrect = true;
+          break;
+        }
       }
     }
     
@@ -993,6 +1189,19 @@ function App() {
         ];
         const randomMessage = detectiveMessages[Math.floor(Math.random() * detectiveMessages.length)];
         setFeedback({ show: true, correct: true, message: randomMessage, correctAnswer: correctAnswerText });
+
+        // Auto-advance to next question after correct answer
+        setTimeout(() => {
+          setFeedback({ show: false, correct: false, message: '', correctAnswer: '' });
+          if (gameActive) {
+            if (detectiveQuestionCount >= detectiveMaxQuestions) {
+              endGame();
+            } else {
+              setDetectiveQuestionCount(prev => prev + 1);
+              generateDetectiveClue();
+            }
+          }
+        }, 1500);
       } else {
         playSound('incorrect');
         const helpfulMessages = [
@@ -1007,27 +1216,24 @@ function App() {
         ];
         const randomMessage = helpfulMessages[Math.floor(Math.random() * helpfulMessages.length)];
         setFeedback({ show: true, correct: false, message: randomMessage, correctAnswer: correctAnswerText });
+        // For wrong answers, don't auto-advance - user must click "Next Question"
       }
     }, 150);
 
     // Clear input fields
     setDetectiveInput({ factor1: '', factor2: '' });
-    
-    // Generate new clue after feedback period
-    setTimeout(() => {
-      setFeedback({ show: false, correct: false, message: '', correctAnswer: '' });
-      if (gameActive) {
-        // Check if we've reached the maximum number of questions
-        if (detectiveQuestionCount >= detectiveMaxQuestions) {
-          // End the game
-          endGame();
-        } else {
-          // Move to next question
-          setDetectiveQuestionCount(prev => prev + 1);
-          generateDetectiveClue();
-        }
+  };
+
+  const moveToNextDetectiveQuestion = () => {
+    setFeedback({ show: false, correct: false, message: '', correctAnswer: '' });
+    if (gameActive) {
+      if (detectiveQuestionCount >= detectiveMaxQuestions) {
+        endGame();
+      } else {
+        setDetectiveQuestionCount(prev => prev + 1);
+        generateDetectiveClue();
       }
-    }, isCorrect ? 1500 : 2500);
+    }
   };
 
   const submitAnswer = () => {
@@ -1195,7 +1401,7 @@ function App() {
 
   useEffect(() => {
     let timer;
-    
+
     // Timer logic - different for multiplayer vs single player
     if (isMultiplayer && (gameMode === 'teacherMonitor' || ((gameMode === 'timed' || gameMode === 'advanced') && userRole === 'student'))) {
       // Multiplayer mode: calculate time based on server timestamp
@@ -1205,17 +1411,34 @@ function App() {
           const startTime = sessionData.startedAt.toDate();
           const elapsed = Math.floor((now - startTime) / 1000);
           const remaining = Math.max(0, (sessionData.timeLimit || 60) - elapsed);
-          
+
           setTimeLeft(remaining);
-          
+
           if (remaining === 0) {
             if (gameMode === 'teacherMonitor') {
               setGameActive(false);
+              playSound('end');
             } else {
+              playSound('end');
               endGame();
             }
           }
         }, 1000);
+      }
+    } else if (gameMode === 'squadBattle' && gameActive) {
+      // Squad battle mode: countdown timer (not paused by feedback)
+      if (timeLeft > 0) {
+        // Play countdown sounds for last 5 seconds
+        if (timeLeft <= 5 && timeLeft > 1) {
+          playSound('countdown');
+        } else if (timeLeft === 1) {
+          playSound('countdownFinal');
+        }
+        timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+      } else if (timeLeft === 0) {
+        setGameActive(false);
+        playSound('end');
+        // Results will be shown by the component when timeLeft === 0
       }
     } else if (!isMultiplayer) {
       // Single player mode: use local timer with feedback pausing
@@ -1225,7 +1448,7 @@ function App() {
         endGame();
       }
     }
-    
+
     return () => {
       if (timer) {
         clearTimeout(timer);
@@ -1240,6 +1463,56 @@ function App() {
       stopBackgroundMusic();
     };
   }, [stopBackgroundMusic]);
+
+  // Navigate to battle when squad battle starts
+  useEffect(() => {
+    if (gameMode === 'squadLobby' && squadData?.isStarted) {
+      playSound('start');
+
+      // Set appropriate game mode based on battle type
+      if (squadData.battleType === 'survival') {
+        setGameMode('squadSurvival');
+      } else {
+        setGameMode('squadBattle');
+      }
+    }
+  }, [gameMode, squadData?.isStarted, squadData?.battleType, playSound]);
+
+  // Auto-start squad battle when entering battle mode
+  useEffect(() => {
+    if (gameMode === 'squadBattle' && !gameActive && squadData?.isStarted) {
+      // Only start if we haven't played yet (timeLeft will be 60 from initial state or reset)
+      // When timer naturally ends, timeLeft will be 0 and gameActive will be false
+      // so we check timeLeft !== 0 to prevent restart
+      if (timeLeft !== 0) {
+        setGameActive(true);
+        const timeLimit = squadData?.battleType === 'quickClash' ? 180 : 180;
+        setTimeLeft(timeLimit);
+        generateQuestion();
+      }
+    }
+  }, [gameMode, gameActive, squadData?.isStarted, squadData?.battleType, generateQuestion, timeLeft]);
+
+  // Auto-start squad survival when entering survival mode
+  useEffect(() => {
+    if (gameMode === 'squadSurvival' && !gameActive && squadData?.isStarted) {
+      setGameActive(true);
+      setPlayerLives(3); // Reset lives
+      setIsEliminated(false); // Reset elimination status
+      generateQuestion();
+    }
+  }, [gameMode, gameActive, squadData?.isStarted, generateQuestion]);
+
+  // Play end sound when survival game is over
+  useEffect(() => {
+    if (gameMode === 'squadSurvival' && squadData?.players) {
+      const activePlayers = squadData.players.filter(p => !p.isEliminated);
+      const gameOver = activePlayers.length <= 1;
+      if (gameOver && squadData.isStarted) {
+        playSound('end');
+      }
+    }
+  }, [gameMode, squadData?.players, squadData?.isStarted]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -1291,26 +1564,41 @@ function App() {
         <div className="floating-demon">👹</div>
         <div className="menu-container">
           <h1>Multiply Monsters</h1>
-          <p>🌟 Welcome to the monster math kingdom! Let's multiply with monsters! 🌟</p>
+          <p>Welcome to the monster math kingdom! Let's multiply with monsters!</p>
           <div className="name-input-container">
-            <label htmlFor="name-input">👋 What's your monster name? 👋</label>
+            <label htmlFor="name-input">What's your name?</label>
+            <div className="name-guidelines">
+              <p>Enter your first and last name so your teacher can identify you</p>
+              <div className="name-examples">
+                <span className="good-example">✅ Emma Johnson</span>
+                <span className="good-example">✅ Alex Smith</span>
+              </div>
+            </div>
             <input
               id="name-input"
               type="text"
               value={userName}
-              onChange={(e) => setUserName(e.target.value)}
+              onChange={(e) => {
+                setUserName(e.target.value);
+                if (nameError) setNameError(''); // Clear error when user starts typing
+              }}
               onKeyPress={handleNameKeyPress}
               className="name-input"
-              placeholder="Enter your monster name"
+              placeholder="First Last"
               autoFocus
-              maxLength={20}
+              maxLength={30}
             />
+            {nameError && (
+              <div className="name-error">
+                ❌ {nameError}
+              </div>
+            )}
             <button 
               onClick={handleNameSubmit} 
               className="submit-button"
               disabled={!userName.trim()}
             >
-              🚀 Enter the Monster Kingdom!
+              🚀 Enter the monster kingdom!
             </button>
           </div>
         </div>
@@ -1327,11 +1615,11 @@ function App() {
         <div className="floating-demon">👹</div>
         <div className="menu-container">
           <h1>Multiply Monsters</h1>
-          <p>🎉 Hi {userName}! Choose your adventure! 🦸‍♂️</p>
+          <p>Hi {userName}! Choose your adventure!</p>
           
           <div className="game-modes-grid">
             <div className="mode-section">
-              <h3 className="section-title">🎮 Solo Adventures</h3>
+              <h3 className="section-title">Solo Adventures</h3>
               <div className="mode-cards">
                 <button className="mode-card training" onClick={startUnlimited}>
                   <div className="card-icon">🐉</div>
@@ -1352,12 +1640,12 @@ function App() {
             </div>
             
             <div className="mode-section">
-              <h3 className="section-title">⚡ Timed Challenges</h3>
+              <h3 className="section-title">Timed Challenges</h3>
               <div className="mode-cards">
                 <button className="mode-card timed" onClick={startTimed}>
                   <div className="card-icon">⏱️</div>
                   <div className="card-content">
-                    <h4>Monster Race</h4>
+                    <h4>Monster race</h4>
                     <p>60-second sprint</p>
                   </div>
                 </button>
@@ -1365,7 +1653,7 @@ function App() {
                 <button className="mode-card advanced" onClick={startAdvanced}>
                   <div className="card-icon">👺</div>
                   <div className="card-content">
-                    <h4>Boss Battle</h4>
+                    <h4>Boss battle</h4>
                     <p>Ultimate challenge</p>
                   </div>
                 </button>
@@ -1373,17 +1661,34 @@ function App() {
             </div>
             
             <div className="mode-section">
-              <h3 className="section-title">🏫 Classroom</h3>
+              <h3 className="section-title">Classroom</h3>
               <div className="mode-cards">
                 <button className="mode-card multiplayer" onClick={() => setGameMode('multiplayerSelect')}>
                   <div className="card-icon">👥</div>
                   <div className="card-content">
-                    <h4>Battle Mode</h4>
-                    <p>Join or host session</p>
+                    <h4>Battle mode</h4>
+                    <p>Teacher-led classroom</p>
+                  </div>
+                </button>
+
+                <button className="mode-card squad" onClick={() => setGameMode('squadSelect')}>
+                  <div className="card-icon">⚔️</div>
+                  <div className="card-content">
+                    <h4>Squad Showdown</h4>
+                    <p>Battle with friends</p>
                   </div>
                 </button>
               </div>
             </div>
+          </div>
+          
+          <div className="version-footer">
+            <button className="version-link" onClick={() => setGameMode('changelog')}>
+              {APP_VERSION}
+            </button>
+            <span className="copyright-text">
+              Copyright {new Date().getFullYear()}, Eric Ellis Design
+            </span>
           </div>
         </div>
       </div>
@@ -1399,20 +1704,948 @@ function App() {
         <div className="floating-robot">🤖</div>
         <div className="floating-demon">👹</div>
         <div className="menu-container">
-          <h1>Classroom Battle Mode</h1>
-          <p>🏫 Join your classmates in an epic monster math battle! 🎓</p>
-          <p><a href="./Multiplication Trainer - Battle Mode Teacher Guide.pdf" target="_blank" rel="noopener noreferrer">📖 Teacher Guide: How to Use Battle Mode in Your Classroom</a></p>
+          <h1>Classroom battle mode</h1>
+          <p>Join your classmates in an epic monster math battle!</p>
+          <p className="teacher-guide-paragraph"><a href="./Multiplication Trainer - Battle Mode Teacher Guide.pdf" target="_blank" rel="noopener noreferrer" className="teacher-guide-link">Teacher Guide: How to Use Battle Mode in Your Classroom</a></p>
           <div className="menu-buttons">
             <button className="mode-button teacher" onClick={() => setGameMode('createSession')}>
-              🍎 Create Classroom Session
-              <span className="mode-description">Teachers: Start a new math battle for your students!</span>
+              🍎 Create classroom session
+              <span className="mode-description">Teachers: start a new math battle for your students!</span>
             </button>
             <button className="mode-button student" onClick={() => setGameMode('joinSession')}>
-              🎒 Join Classroom Session
-              <span className="mode-description">Students: Enter a session code to join the battle!</span>
+              🎒 Join classroom session
+              <span className="mode-description">Students: enter a session code to join the battle!</span>
             </button>
             <button className="mode-button back" onClick={() => setGameMode('menu')}>
-              ← Back to Menu
+              ← Back to menu
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Monster Squad Showdown Selection
+  if (gameMode === 'squadSelect') {
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+        <div className="menu-container">
+          <h1>Monster Squad Showdown</h1>
+          <p>Battle with friends in small group competitions!</p>
+          <div className="menu-buttons">
+            <button className="mode-button squad-create" onClick={() => setGameMode('createSquadBattle')}>
+              ⚔️ Start Squad Battle
+              <span className="mode-description">Create a battle and invite friends to join!</span>
+            </button>
+            <button className="mode-button squad-join" onClick={() => setGameMode('joinSquadBattle')}>
+              🛡️ Join Squad Battle
+              <span className="mode-description">Enter a 3-character code to join a friend's battle!</span>
+            </button>
+            <button className="mode-button back" onClick={() => setGameMode('menu')}>
+              ← Back to menu
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Create Squad Battle - Battle Type Selection
+  if (gameMode === 'createSquadBattle') {
+    const handleCreateSquadBattle = async (battleType) => {
+      console.log('🚀 Starting squad battle creation...', { userName, battleType });
+      setIsCreatingSquad(true);
+      setSquadBattleType(battleType);
+
+      try {
+        const result = await createSquadBattle(userName, battleType);
+        console.log('📊 Squad battle creation result:', result);
+
+        if (result.success) {
+          console.log('✅ Squad battle created successfully:', result.code);
+          setSquadCode(result.code);
+          setIsSquadHost(true);
+          setIsSquadBattle(true);
+          setGameMode('squadLobby');
+
+          // Subscribe to squad battle updates
+          const unsubscribe = listenToSquadBattle(result.code, (data) => {
+            if (data) {
+              setSquadData(data);
+              setPlayersReady(new Set(data.readyPlayers || []));
+            } else {
+              console.log('Squad battle no longer exists');
+              setGameMode('menu');
+            }
+          });
+          setSquadUnsubscribe(() => unsubscribe);
+
+        } else {
+          console.error('❌ Failed to create squad battle:', result.error);
+          alert(`Failed to create squad battle: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('💥 Error during squad battle creation:', error);
+        alert('Error creating squad battle. Please try again.');
+      } finally {
+        setIsCreatingSquad(false);
+      }
+    };
+
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+        <div className="menu-container">
+          <h1>Choose Your Battle</h1>
+          <p>Select a battle type to challenge your friends!</p>
+          <div className="menu-buttons">
+            <button
+              className="mode-button squad-battle-type quick-clash-card"
+              onClick={() => handleCreateSquadBattle('quickClash')}
+              disabled={isCreatingSquad}
+            >
+              ⚡ Quick Clash
+              <span className="mode-description">3 minutes • Fast-paced competition</span>
+            </button>
+
+            <button
+              className="mode-button squad-battle-type survival-card"
+              onClick={() => handleCreateSquadBattle('survival')}
+              disabled={isCreatingSquad}
+            >
+              💀 Survival
+              <span className="mode-description">Last player standing wins!</span>
+            </button>
+
+            <button
+              className="mode-button back"
+              onClick={() => setGameMode('squadSelect')}
+              disabled={isCreatingSquad}
+            >
+              ← Back to squad options
+            </button>
+          </div>
+
+          {isCreatingSquad && (
+            <div className="loading-message">
+              Creating your squad battle...
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Squad Lobby - Players wait and ready up
+  if (gameMode === 'squadLobby') {
+    const handlePlayerReady = async () => {
+      const newReadyState = !isPlayerReady;
+      setIsPlayerReady(newReadyState);
+
+      await updatePlayerReady(squadCode, userName, newReadyState);
+      playSound('click');
+    };
+
+    const handleStartBattle = async () => {
+      if (!isSquadHost) return;
+
+      const allPlayersReady = squadData?.players?.every(p => p.isReady) || false;
+      const hasMinPlayers = squadData?.players?.length >= 2;
+
+      if (!allPlayersReady) {
+        alert('All players must be ready before starting the battle!');
+        return;
+      }
+
+      if (!hasMinPlayers) {
+        alert('Need at least 2 players to start a battle!');
+        return;
+      }
+
+      await startSquadBattle(squadCode);
+      playSound('click');
+
+      // The battle will start automatically when Firebase updates
+    };
+
+    const handleLeaveBattle = async () => {
+      if (squadUnsubscribe) {
+        squadUnsubscribe();
+        setSquadUnsubscribe(null);
+      }
+
+      await leaveSquadBattle(squadCode, userName);
+
+      // Reset squad states
+      setIsSquadBattle(false);
+      setSquadCode('');
+      setSquadData(null);
+      setIsSquadHost(false);
+      setIsPlayerReady(false);
+      setPlayersReady(new Set());
+
+      setGameMode('menu');
+    };
+
+    const getBattleTypeDisplay = () => {
+      const type = squadData?.battleType;
+      switch (type) {
+        case 'quickClash': return { name: 'Quick Clash', emoji: '⚡', time: '3 minutes' };
+        case 'survival': return { name: 'Survival', emoji: '💀', time: 'Until elimination' };
+        default: return { name: 'Unknown', emoji: '⚔️', time: '' };
+      }
+    };
+
+    const getBattleTypeClass = () => {
+      const type = squadData?.battleType;
+      switch (type) {
+        case 'quickClash': return 'quick-clash-lobby';
+        case 'survival': return 'survival-lobby';
+        default: return '';
+      }
+    };
+
+    const battleInfo = getBattleTypeDisplay();
+    const lobbyClass = getBattleTypeClass();
+    const allReady = squadData?.players?.every(p => p.isReady) || false;
+    const playerCount = squadData?.players?.length || 0;
+    const maxPlayers = 6;
+
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+        <div className={`menu-container ${lobbyClass}`}>
+          <h1>{battleInfo.emoji} {battleInfo.name} Lobby</h1>
+          <div className="squad-code-display">
+            <h2>Squad Code: <span className="code-highlight">{squadCode}</span></h2>
+            <p>Share this code with your friends!</p>
+          </div>
+
+          <div className="battle-info">
+            <p><strong>Battle Type:</strong> {battleInfo.name}</p>
+            <p><strong>Duration:</strong> {battleInfo.time}</p>
+            <p><strong>Difficulty:</strong> 1-12 multiplication tables</p>
+          </div>
+
+          <div className="players-section">
+            <h3>Players ({playerCount}/{maxPlayers})</h3>
+            <div className="players-list">
+              {squadData?.players?.map((player, index) => (
+                <div key={player.name} className={`player-item ${player.isHost ? 'host' : ''} ${player.isReady ? 'ready' : 'not-ready'}`}>
+                  <div className="player-info">
+                    <span className="player-name">
+                      {player.isHost && '👑 '}
+                      {player.name}
+                    </span>
+                    <span className={`ready-status ${player.isReady ? 'ready' : 'not-ready'}`}>
+                      {player.isReady ? '✅ Ready' : '⏳ Not Ready'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="lobby-actions">
+            <button
+              className={`mode-button ready-button ${isPlayerReady ? 'ready' : 'not-ready'}`}
+              onClick={handlePlayerReady}
+            >
+              {isPlayerReady ? '✅ Ready!' : '⏳ I\'m Ready!'}
+            </button>
+
+            {isSquadHost && (
+              <button
+                className="mode-button start-battle"
+                onClick={handleStartBattle}
+                disabled={!allReady || playerCount < 2}
+              >
+                🚀 Start Battle!
+                {!allReady && <span className="button-note">All players must be ready</span>}
+                {playerCount < 2 && <span className="button-note">Need at least 2 players</span>}
+              </button>
+            )}
+
+            <button className="mode-button back" onClick={handleLeaveBattle}>
+              ← Leave Squad
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Join Squad Battle - Enter Code
+  if (gameMode === 'joinSquadBattle') {
+    const handleJoinSquadBattle = async () => {
+      if (!squadInputCode.trim()) {
+        alert('Please enter a squad code!');
+        return;
+      }
+
+      const codeToJoin = squadInputCode.trim().toUpperCase();
+      setIsJoiningSquad(true);
+
+      try {
+        console.log('🚀 Attempting to join squad battle:', codeToJoin);
+        const result = await joinSquadBattle(codeToJoin, userName);
+
+        if (result.success) {
+          console.log('✅ Successfully joined squad battle');
+          setSquadCode(codeToJoin);
+          setIsSquadBattle(true);
+          setIsSquadHost(false);
+          setGameMode('squadLobby');
+
+          // Subscribe to squad battle updates
+          const unsubscribe = listenToSquadBattle(codeToJoin, (data) => {
+            if (data) {
+              setSquadData(data);
+              setPlayersReady(new Set(data.readyPlayers || []));
+            } else {
+              console.log('Squad battle no longer exists');
+              alert('Squad battle ended or no longer exists');
+              setGameMode('menu');
+            }
+          });
+          setSquadUnsubscribe(() => unsubscribe);
+
+        } else {
+          console.error('❌ Failed to join squad:', result.error);
+          alert(`Could not join squad: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('💥 Error joining squad:', error);
+        alert('Error joining squad battle. Please try again.');
+      } finally {
+        setIsJoiningSquad(false);
+      }
+    };
+
+    const handleCodeKeyPress = (e) => {
+      if (e.key === 'Enter') {
+        handleJoinSquadBattle();
+      }
+    };
+
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+        <div className="menu-container">
+          <h1>Join Squad Battle</h1>
+          <p>Enter the 3-character code your friend shared with you!</p>
+
+          <div className="code-input-section">
+            <label htmlFor="squad-code-input">Squad Code</label>
+            <input
+              id="squad-code-input"
+              type="text"
+              value={squadInputCode}
+              onChange={(e) => setSquadInputCode(e.target.value.toUpperCase())}
+              onKeyPress={handleCodeKeyPress}
+              className="squad-code-input"
+              placeholder="ABC"
+              maxLength={3}
+              autoFocus
+              disabled={isJoiningSquad}
+            />
+          </div>
+
+          <div className="menu-buttons">
+            <button
+              className="mode-button squad-join-confirm"
+              onClick={handleJoinSquadBattle}
+              disabled={!squadInputCode.trim() || isJoiningSquad}
+            >
+              🛡️ Join Battle!
+              {isJoiningSquad && <span className="mode-description">Joining...</span>}
+            </button>
+
+            <button
+              className="mode-button back"
+              onClick={() => setGameMode('squadSelect')}
+              disabled={isJoiningSquad}
+            >
+              ← Back to squad options
+            </button>
+          </div>
+
+          {isJoiningSquad && (
+            <div className="loading-message">
+              Joining squad battle...
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Squad Battle - Quick Clash & Epic Duel
+  if (gameMode === 'squadBattle') {
+    const handleSquadSubmitAnswer = async () => {
+      const answer = parseInt(userAnswer);
+      const correctAnswer = currentQuestion.a * currentQuestion.b;
+      const isCorrect = answer === correctAnswer;
+
+      if (isCorrect) {
+        const newScore = score.correct + 1;
+        const newStreak = currentStreak + 1;
+        setScore({ ...score, correct: newScore, total: score.total + 1 });
+        setCurrentStreak(newStreak);
+
+        // Update score in Firebase
+        await updateSquadPlayerScore(squadCode, userName, newScore, newStreak);
+
+        setFeedback({
+          show: true,
+          correct: true,
+          message: `Correct! ${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}`,
+          correctAnswer
+        });
+        playSound('correct');
+      } else {
+        setScore({ ...score, total: score.total + 1 });
+        setCurrentStreak(0);
+
+        // Update score in Firebase
+        await updateSquadPlayerScore(squadCode, userName, score.correct, 0);
+
+        setFeedback({
+          show: true,
+          correct: false,
+          message: `${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}`,
+          correctAnswer
+        });
+        playSound('incorrect');
+      }
+
+      setUserAnswer('');
+
+      setTimeout(() => {
+        setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+        generateQuestion();
+      }, 1000);
+    };
+
+    const handleSquadKeyPress = (e) => {
+      if (e.key === 'Enter' && userAnswer.trim()) {
+        handleSquadSubmitAnswer();
+      }
+    };
+
+    const handleLeaveSquadBattle = async () => {
+      if (squadUnsubscribe) {
+        squadUnsubscribe();
+        setSquadUnsubscribe(null);
+      }
+
+      await leaveSquadBattle(squadCode, userName);
+
+      // Reset all states
+      setIsSquadBattle(false);
+      setSquadCode('');
+      setSquadData(null);
+      setIsSquadHost(false);
+      setIsPlayerReady(false);
+      setPlayersReady(new Set());
+      setGameActive(false);
+      setTimeLeft(60);
+      setScore({ correct: 0, total: 0 });
+      setCurrentStreak(0);
+
+      setGameMode('menu');
+    };
+
+    // Calculate time left based on battle type
+    const getTimeLimit = () => {
+      if (squadData?.battleType === 'quickClash') return 180; // 3 minutes
+      return 180; // default
+    };
+
+    const getBattleTypeDisplay = () => {
+      switch (squadData?.battleType) {
+        case 'quickClash': return { name: 'Quick Clash', emoji: '⚡' };
+        default: return { name: 'Squad Battle', emoji: '⚔️' };
+      }
+    };
+
+    const getBattleTypeClass = () => {
+      switch (squadData?.battleType) {
+        case 'quickClash': return 'quick-clash';
+        default: return '';
+      }
+    };
+
+    const battleInfo = getBattleTypeDisplay();
+    const battleClass = getBattleTypeClass();
+    const sortedPlayers = squadData?.players
+      ?.filter(p => !p.isEliminated)
+      ?.sort((a, b) => b.score - a.score) || [];
+
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+
+        <div className={`game-container ${battleClass}`}>
+          <div className="game-header">
+            <div className="compact-game-stats">
+              <span className="battle-type">{battleInfo.emoji} {battleInfo.name}</span>
+              <span className="timer">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
+              <span className="score">
+                {score.correct}/{score.total}
+                {currentStreak > 0 && <span className="streak"> 🔥{currentStreak}</span>}
+              </span>
+              <span className="session-indicator">{squadCode}</span>
+            </div>
+          </div>
+
+          <div className="question-container">
+            {feedback.show ? (
+              <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
+                <div className="feedback-message">{feedback.message}</div>
+              </div>
+            ) : (
+              <>
+                <div className="question">
+                  {currentQuestion.a} × {currentQuestion.b} = ?
+                </div>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyPress={handleSquadKeyPress}
+                  className="answer-input"
+                  placeholder="Your answer"
+                  autoFocus
+                  disabled={!gameActive || timeLeft === 0}
+                />
+                <button
+                  onClick={handleSquadSubmitAnswer}
+                  disabled={!userAnswer.trim() || !gameActive || timeLeft === 0}
+                  className="submit-button"
+                >
+                  ⚔️ Attack!
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="squad-leaderboard">
+            <h3>Live Rankings</h3>
+            <div className="live-players">
+              {sortedPlayers.map((player, index) => (
+                <div key={player.name} className={`live-player-item rank-${index + 1}`}>
+                  <div className="rank-badge">#{index + 1}</div>
+                  <div className="player-details">
+                    <span className="player-name">
+                      {player.isHost && '👑 '}
+                      {player.name}
+                      {player.name === userName && ' (You)'}
+                    </span>
+                    <div className="player-stats">
+                      <span className="score">{player.score} points</span>
+                      {player.currentStreak > 0 && (
+                        <span className="streak">🔥 {player.currentStreak}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="game-controls">
+            {timeLeft === 0 ? (
+              <button className="mode-button results" onClick={() => setGameMode('squadResults')}>
+                🏆 View Results
+              </button>
+            ) : (
+              <button className="back-button" onClick={handleLeaveSquadBattle}>
+                ← Leave Battle
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Squad Survival Mode - Last Player Standing
+  if (gameMode === 'squadSurvival') {
+
+    const handleSurvivalSubmitAnswer = async () => {
+      const answer = parseInt(userAnswer);
+      const correctAnswer = currentQuestion.a * currentQuestion.b;
+      const isCorrect = answer === correctAnswer;
+
+      if (isCorrect) {
+        const newScore = score.correct + 1;
+        const newStreak = currentStreak + 1;
+        setScore({ ...score, correct: newScore, total: score.total + 1 });
+        setCurrentStreak(newStreak);
+
+        // Update score in Firebase
+        await updateSquadPlayerScore(squadCode, userName, newScore, newStreak);
+
+        setFeedback({
+          show: true,
+          correct: true,
+          message: `Correct! ${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}`,
+          correctAnswer
+        });
+        playSound('correct');
+      } else {
+        const newLives = playerLives - 1;
+        setScore({ ...score, total: score.total + 1 });
+        setCurrentStreak(0);
+
+        if (newLives <= 0) {
+          // Player is eliminated
+          setIsEliminated(true);
+          await eliminatePlayer(squadCode, userName);
+          setFeedback({
+            show: true,
+            correct: false,
+            message: `💀 Eliminated! ${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}`,
+            correctAnswer
+          });
+        } else {
+          setPlayerLives(newLives);
+          setFeedback({
+            show: true,
+            correct: false,
+            message: `💔 Lost a life! ${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}. ${newLives} lives left.`,
+            correctAnswer
+          });
+        }
+
+        // Update score in Firebase (even if eliminated, for final standings)
+        await updateSquadPlayerScore(squadCode, userName, score.correct, 0);
+        playSound('incorrect');
+      }
+
+      setUserAnswer('');
+
+      setTimeout(() => {
+        setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+        if (!isEliminated && playerLives > 0) {
+          generateQuestion();
+        }
+      }, 2000); // Longer timeout for survival mode to read elimination messages
+    };
+
+    const handleSurvivalKeyPress = (e) => {
+      if (e.key === 'Enter' && userAnswer.trim() && !isEliminated) {
+        handleSurvivalSubmitAnswer();
+      }
+    };
+
+    const handleLeaveSurvival = async () => {
+      if (squadUnsubscribe) {
+        squadUnsubscribe();
+        setSquadUnsubscribe(null);
+      }
+
+      await leaveSquadBattle(squadCode, userName);
+
+      // Reset all states
+      setIsSquadBattle(false);
+      setSquadCode('');
+      setSquadData(null);
+      setIsSquadHost(false);
+      setIsPlayerReady(false);
+      setPlayersReady(new Set());
+      setGameActive(false);
+      setTimeLeft(60);
+      setScore({ correct: 0, total: 0 });
+      setCurrentStreak(0);
+      setPlayerLives(3);
+      setIsEliminated(false);
+
+      setGameMode('menu');
+    };
+
+    // Check if game should end (only 1 or 0 players left)
+    const activePlayers = squadData?.players?.filter(p => !p.isEliminated) || [];
+    const gameOver = activePlayers.length <= 1;
+
+    const sortedPlayers = squadData?.players
+      ?.sort((a, b) => {
+        // Sort by: not eliminated first, then by score
+        if (a.isEliminated && !b.isEliminated) return 1;
+        if (!a.isEliminated && b.isEliminated) return -1;
+        return b.score - a.score;
+      }) || [];
+
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+
+        <div className="game-container survival-mode">
+          <div className="game-header">
+            <div className="compact-game-stats">
+              <span className="battle-type">💀 Survival Mode</span>
+              <span className="score">
+                {score.correct}/{score.total}
+                {currentStreak > 0 && <span className="streak"> 🔥{currentStreak}</span>}
+              </span>
+              <span className="session-indicator">
+                {isEliminated ? '💀 Eliminated' : `❤️ ${playerLives} Lives`}
+              </span>
+              <span className="session-indicator">{squadCode}</span>
+            </div>
+          </div>
+
+          <div className="question-container">
+            {feedback.show ? (
+              <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
+                <div className="feedback-message">{feedback.message}</div>
+              </div>
+            ) : isEliminated ? (
+              <div className="feedback incorrect">
+                <div className="feedback-message">💀 You've been eliminated!</div>
+                <div className="correct-answer">Watch the remaining players battle it out.</div>
+              </div>
+            ) : gameOver ? (
+              <div className="feedback correct">
+                <div className="feedback-message">🏆 Survival Complete!</div>
+                <div className="correct-answer">Only the strongest survived!</div>
+              </div>
+            ) : (
+              <>
+                <div className="question">
+                  {currentQuestion.a} × {currentQuestion.b} = ?
+                </div>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyPress={handleSurvivalKeyPress}
+                  className="answer-input"
+                  placeholder="Your answer"
+                  autoFocus
+                  disabled={isEliminated || gameOver}
+                />
+                <button
+                  onClick={handleSurvivalSubmitAnswer}
+                  disabled={!userAnswer.trim() || isEliminated || gameOver}
+                  className="submit-button"
+                >
+                  ⚔️ Attack!
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="squad-leaderboard">
+            <h3>Survival Rankings</h3>
+            <div className="live-players">
+              {sortedPlayers.map((player, index) => (
+                <div key={player.name} className={`live-player-item rank-${index + 1} ${player.isEliminated ? 'eliminated' : ''}`}>
+                  <div className={`rank-badge ${player.isEliminated ? 'eliminated' : ''}`}>
+                    {player.isEliminated ? '💀' : `#${index + 1}`}
+                  </div>
+                  <div className="player-details">
+                    <span className="player-name">
+                      {player.isHost && '👑 '}
+                      {player.name}
+                      {player.name === userName && ' (You)'}
+                      {player.isEliminated && ' - ELIMINATED'}
+                    </span>
+                    <div className="player-stats">
+                      <span className="score">{player.score} correct</span>
+                      {!player.isEliminated && player.currentStreak > 0 && (
+                        <span className="streak">🔥 {player.currentStreak}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="game-controls">
+            {gameOver ? (
+              <button className="mode-button results" onClick={() => setGameMode('squadResults')}>
+                🏆 View Results
+              </button>
+            ) : (
+              <button className="back-button" onClick={handleLeaveSurvival}>
+                ← Leave Survival
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Squad Battle Results Screen
+  if (gameMode === 'squadResults') {
+    const handleReturnToMenu = async () => {
+      // Clean up squad battle state
+      if (squadUnsubscribe) {
+        squadUnsubscribe();
+        setSquadUnsubscribe(null);
+      }
+
+      // Reset all squad battle states
+      setIsSquadBattle(false);
+      setSquadCode('');
+      setSquadData(null);
+      setIsSquadHost(false);
+      setIsPlayerReady(false);
+      setPlayersReady(new Set());
+      setGameActive(false);
+      setTimeLeft(60);
+      setScore({ correct: 0, total: 0 });
+      setCurrentStreak(0);
+      setPlayerLives(3);
+      setIsEliminated(false);
+
+      setGameMode('menu');
+    };
+
+    const battleTypeDisplay = {
+      quickClash: { name: 'Quick Clash', emoji: '⚡', description: '3-minute speed battle' },
+      epicDuel: { name: 'Epic Duel', emoji: '🏆', description: '5-minute marathon' },
+      survival: { name: 'Survival Mode', emoji: '💀', description: 'Last player standing' }
+    };
+
+    const currentBattleType = battleTypeDisplay[squadData?.battleType] || battleTypeDisplay.quickClash;
+
+    // Sort players for final results
+    const finalResults = squadData?.players?.sort((a, b) => {
+      // For survival mode: not eliminated first, then by score
+      if (squadData?.battleType === 'survival') {
+        if (a.isEliminated && !b.isEliminated) return 1;
+        if (!a.isEliminated && b.isEliminated) return -1;
+      }
+      // Then sort by score (highest first)
+      return b.score - a.score;
+    }) || [];
+
+    const playerResult = finalResults.find(p => p.name === userName);
+    const playerRank = finalResults.findIndex(p => p.name === userName) + 1;
+
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+
+        <div className="results-container">
+          <div className="results-header">
+            <h1>Battle Complete!</h1>
+            <div className="battle-summary">
+              <div className="battle-type-display">
+                <span className="battle-emoji">{currentBattleType.emoji}</span>
+                <div className="battle-details">
+                  <h2>{currentBattleType.name}</h2>
+                  <p>{currentBattleType.description}</p>
+                </div>
+              </div>
+              <div className="session-code">Squad: {squadCode}</div>
+            </div>
+          </div>
+
+          <div className="personal-result">
+            <div className="result-card">
+              <h2>Your Performance</h2>
+              <div className="rank-display">
+                <div className="rank-position">#{playerRank}</div>
+                <div className="rank-text">
+                  {playerRank === 1 && '🏆 Champion!'}
+                  {playerRank === 2 && '🥈 Runner-up!'}
+                  {playerRank === 3 && '🥉 Third place!'}
+                  {playerRank > 3 && `${playerRank}th place`}
+                </div>
+              </div>
+              <div className="personal-stats-grid">
+                <div className="stat-box">
+                  <div className="stat-number">{playerResult?.score || 0}</div>
+                  <div className="stat-label">Correct Answers</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-number">{playerResult?.bestStreak || 0}</div>
+                  <div className="stat-label">Best Streak</div>
+                </div>
+                {squadData?.battleType === 'survival' && (
+                  <div className="stat-box">
+                    <div className="stat-number">
+                      {playerResult?.isEliminated ? '💀' : '❤️'}
+                    </div>
+                    <div className="stat-label">
+                      {playerResult?.isEliminated ? 'Eliminated' : 'Survived'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="final-leaderboard">
+            <h2>Final Rankings</h2>
+            <div className="leaderboard-list">
+              {finalResults.map((player, index) => (
+                <div key={player.name} className={`leaderboard-item rank-${index + 1} ${player.name === userName ? 'current-player' : ''}`}>
+                  <div className="rank-badge">
+                    {index === 0 && '🏆'}
+                    {index === 1 && '🥈'}
+                    {index === 2 && '🥉'}
+                    {index > 2 && `#${index + 1}`}
+                  </div>
+                  <div className="player-info">
+                    <div className="player-name">
+                      {player.isHost && '👑 '}
+                      {player.name}
+                      {player.name === userName && ' (You)'}
+                      {squadData?.battleType === 'survival' && player.isEliminated && (
+                        <span className="eliminated-tag"> - Eliminated</span>
+                      )}
+                    </div>
+                    <div className="player-results">
+                      <span className="final-score">{player.score} correct</span>
+                      {player.bestStreak > 0 && (
+                        <span className="best-streak">🔥 {player.bestStreak} best streak</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="results-actions">
+            <button className="play-again-btn" onClick={() => setGameMode('squadSelect')}>
+              🔄 Play Another Battle
+            </button>
+            <button className="back-home-btn" onClick={handleReturnToMenu}>
+              🏠 Return to Kingdom
             </button>
           </div>
         </div>
@@ -1468,11 +2701,11 @@ function App() {
         <div className="floating-robot">🤖</div>
         <div className="floating-demon">👹</div>
         <div className="menu-container">
-          <h1>Create Classroom Session</h1>
-          <p>🍎 Hello Teacher {userName}! Set up a monster math battle for your students.</p>
+          <h1>Create classroom session</h1>
+          <p>Hello Teacher {userName}! Set up a monster math battle for your students.</p>
           
           <div className="session-setup">
-            <h3>Choose Battle Mode:</h3>
+            <h3>Choose battle mode:</h3>
             <div className="mode-selection">
               <label className="mode-option">
                 <input
@@ -1481,7 +2714,7 @@ function App() {
                   checked={selectedGameMode === 'timed'}
                   onChange={(e) => setSelectedGameMode(e.target.value)}
                 />
-                ⏱️ Monster Race (60 seconds)
+                Monster Race (60 seconds)
               </label>
               <label className="mode-option">
                 <input
@@ -1490,7 +2723,7 @@ function App() {
                   checked={selectedGameMode === 'advanced'}
                   onChange={(e) => setSelectedGameMode(e.target.value)}
                 />
-                👺 Boss Monster Battle (60 seconds)
+                Boss Monster Battle (60 seconds)
               </label>
             </div>
           </div>
@@ -1501,7 +2734,7 @@ function App() {
               onClick={handleCreateSession}
               disabled={isCreating}
             >
-              {isCreating ? '🔄 Creating...' : '🚀 Create Session'}
+              {isCreating ? '🔄 Creating...' : '🚀 Create session'}
             </button>
             <button className="mode-button back" onClick={() => setGameMode('multiplayerSelect')}>
               ← Back
@@ -1590,11 +2823,11 @@ function App() {
         <div className="floating-robot">🤖</div>
         <div className="floating-demon">👹</div>
         <div className="menu-container">
-          <h1>Join Classroom Session</h1>
-          <p>🎒 Hi {userName}! Enter the session code your teacher gave you.</p>
+          <h1>Join classroom session</h1>
+          <p>Hi {userName}! Enter the session code your teacher gave you.</p>
           
           <div className="session-join">
-            <label htmlFor="session-code">📝 Session Code:</label>
+            <label htmlFor="session-code">Session Code:</label>
             <input
               id="session-code"
               type="text"
@@ -1614,7 +2847,7 @@ function App() {
               onClick={handleJoinSession}
               disabled={isJoining || !inputCode.trim() || inputCode.length !== 4}
             >
-              {isJoining ? '🔄 Joining...' : '🎒 Join Battle!'}
+              {isJoining ? '🔄 Joining...' : '🎒 Join battle!'}
             </button>
             <button className="mode-button back" onClick={async () => {
               // Clean up any partial multiplayer state
@@ -1649,18 +2882,18 @@ function App() {
         <div className="floating-robot">🤖</div>
         <div className="floating-demon">👹</div>
         <div className="menu-container">
-          <h1>Classroom Lobby</h1>
+          <h1>Classroom lobby</h1>
           <div className="session-info">
-            <h2>📋 Session Code: <span className="session-code-display">{sessionCode}</span></h2>
+            <h2>Session Code: <span className="session-code-display">{sessionCode}</span></h2>
             <p>Share this code with your students!</p>
           </div>
           
           <div className="students-list">
-            <h3>👥 Students Joined ({sessionData?.students?.length || 0}):</h3>
+            <h3>Students Joined ({sessionData?.students?.length || 0}):</h3>
             <div className="students-grid">
               {sessionData?.students?.map((student, index) => (
                 <div key={index} className="student-card">
-                  <span className="student-name">🎒 {student.name}</span>
+                  <span className="student-name">{student.name}</span>
                   <span className="student-status">Ready!</span>
                 </div>
               ))}
@@ -1676,7 +2909,7 @@ function App() {
               onClick={handleStartGame}
               disabled={!sessionData?.students || sessionData.students.length === 0}
             >
-              🚀 Start Battle!
+              🚀 Start battle!
             </button>
             <button className="mode-button back" onClick={() => {
               if (sessionUnsubscribe) sessionUnsubscribe();
@@ -1700,11 +2933,11 @@ function App() {
         <div className="floating-robot">🤖</div>
         <div className="floating-demon">👹</div>
         <div className="menu-container">
-          <h1>Waiting for Battle</h1>
+          <h1>Waiting for battle</h1>
           <div className="session-info">
-            <h2>📋 Session: {sessionCode}</h2>
-            <p>🍎 Teacher: {sessionData?.teacherName}</p>
-            <p>⚔️ Mode: {sessionData?.gameMode === 'timed' ? 'Monster Race (60s)' : 'Boss Battle (60s)'}</p>
+            <h2>Session: {sessionCode}</h2>
+            <p>Teacher: {sessionData?.teacherName}</p>
+            <p>Mode: {sessionData?.gameMode === 'timed' ? 'Monster Race (60s)' : 'Boss Battle (60s)'}</p>
           </div>
           
           <div className="students-list">
@@ -1712,7 +2945,7 @@ function App() {
             <div className="students-grid">
               {sessionData?.students?.map((student, index) => (
                 <div key={index} className="student-card">
-                  <span className="student-name">🎒 {student.name}</span>
+                  <span className="student-name">{student.name}</span>
                   <span className="student-status">Ready!</span>
                 </div>
               ))}
@@ -1720,7 +2953,7 @@ function App() {
           </div>
           
           <div className="waiting-message">
-            <p>⏳ Waiting for your teacher to start the battle...</p>
+            <p>Waiting for your teacher to start the battle...</p>
           </div>
           
           <div className="menu-buttons">
@@ -1748,10 +2981,10 @@ function App() {
         <div className="floating-robot">🤖</div>
         <div className="floating-demon">👹</div>
         <div className="menu-container">
-          <h1>🍎 Battle Monitor</h1>
+          <h1>🍎 Battle monitor</h1>
           <div className="session-info">
-            <h2>📋 Session: {sessionCode}</h2>
-            <p>⚔️ Mode: {sessionData?.gameMode === 'timed' ? 'Monster Race (60s)' : 'Boss Battle (60s)'}</p>
+            <h2>Session: {sessionCode}</h2>
+            <p>Mode: {sessionData?.gameMode === 'timed' ? 'Monster Race (60s)' : 'Boss Battle (60s)'}</p>
             {!isGameFinished ? (
               <div className="timer-display">
                 <h2>⏰ Time Remaining: {gameTimeLeft}s</h2>
@@ -1787,7 +3020,7 @@ function App() {
                           <span className="score-display">{student.score.correct}/{student.score.total}</span>
                           <span className="percentage-display">{percentage}%</span>
                           {student.bestStreak > 0 && (
-                            <span className="streak-display">🔥{student.bestStreak}</span>
+                            <span className="streak-display">{student.bestStreak} streak</span>
                           )}
                         </div>
                       </div>
@@ -1819,7 +3052,7 @@ function App() {
                     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
                   }}
                 >
-                  🏠 Back to Menu
+                  🏠 Back to menu
                 </button>
               </>
             ) : (
@@ -1836,7 +3069,7 @@ function App() {
                   );
                 }}
               >
-                🛑 End Battle Now
+                🛑 End battle now
               </button>
             )}
           </div>
@@ -1875,17 +3108,17 @@ function App() {
         <div className="floating-robot">🤖</div>
         <div className="floating-demon">👹</div>
         <div className="results-container">
-          <h1>🏆 Battle Results</h1>
+          <h1>Battle results</h1>
           
           {winner && (
             <div className="winner-announcement">
-              <h2>🎉 Champion: {winner.name}! 🎉</h2>
-              <p>🎯 Accuracy: {Math.round(winner.percentage)}% | ⚔️ Battles: {winner.score.correct}/{winner.score.total}</p>
+              <h2>Champion: {winner.name}!</h2>
+              <p>Accuracy: {Math.round(winner.percentage)}% | Battles: {winner.score.correct}/{winner.score.total}</p>
             </div>
           )}
           
           <div className="final-leaderboard">
-            <h3>📋 Final Rankings</h3>
+            <h3>Final Rankings</h3>
             <div className="final-results-grid">
               {sortedStudents.map((student, index) => (
                 <div key={student.name} className={`final-result-entry ${index === 0 ? 'winner' : index < 3 ? 'podium' : ''}`}>
@@ -1906,7 +3139,7 @@ function App() {
                       {student.bestStreak > 0 && (
                         <div className="stat-item">
                           <span className="stat-label">Best Streak:</span>
-                          <span className="stat-value">🔥{student.bestStreak}</span>
+                          <span className="stat-value">{student.bestStreak}</span>
                         </div>
                       )}
                     </div>
@@ -1937,7 +3170,42 @@ function App() {
                 setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
               }}
             >
-              🏠 Back to Menu
+              🏠 Back to menu
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Changelog screen
+  if (gameMode === 'changelog') {
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+        <div className="menu-container">
+          <h1>Version history</h1>
+          <div className="changelog-container">
+            {CHANGELOG.map((release) => (
+              <div key={release.version} className="changelog-entry">
+                <div className="changelog-header">
+                  <h3 className="changelog-version">{release.version}</h3>
+                  <span className="changelog-date">{release.date}</span>
+                </div>
+                <ul className="changelog-features">
+                  {release.features.map((feature, index) => (
+                    <li key={index}>{feature}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="menu-buttons">
+            <button className="mode-button back" onClick={() => setGameMode('menu')}>
+              ← Back to menu
             </button>
           </div>
         </div>
@@ -1957,21 +3225,21 @@ function App() {
         <div className="floating-robot">🤖</div>
         <div className="floating-demon">👹</div>
         <div className="results-container">
-          <h1>Monster Master {userName}!</h1>
+          <h1>Monster master {userName}!</h1>
           
           <div className="current-results">
-            <h2>🎮 This Monster Battle</h2>
+            <h2>This Monster Battle</h2>
             <div className="results">
               <div className="result-item">
-                <span className="result-label">👾 Monsters Encountered:</span>
+                <span className="result-label">Monsters Encountered:</span>
                 <span className="result-value">{score.total}</span>
               </div>
               <div className="result-item">
-                <span className="result-label">🏆 Monsters Defeated:</span>
+                <span className="result-label">Monsters Defeated:</span>
                 <span className="result-value">{score.correct}</span>
               </div>
               <div className="result-item">
-                <span className="result-label">⚔️ Battle Success Rate:</span>
+                <span className="result-label">Battle Success Rate:</span>
                 <span className="result-value">{percentage}%</span>
               </div>
             </div>
@@ -1980,7 +3248,7 @@ function App() {
           {showHistory && (
             <div className="score-history">
               <div className="history-header">
-                <h2>📈 Monster Hunting Progress</h2>
+                <h2>Monster Hunting Progress</h2>
                 <button 
                   className="clear-history-button" 
                   onClick={() => clearHistory(previousGameMode === 'timed' ? 'timed' : 'advanced')}
@@ -2009,7 +3277,7 @@ function App() {
           )}
 
           <button className="back-button" onClick={backToMenu}>
-            🏠 Return to Monster Kingdom
+            🏠 Return to monster kingdom
           </button>
         </div>
       </div>
@@ -2037,7 +3305,7 @@ function App() {
       {showError && (
         <div className="error-overlay" onClick={hideErrorMessage}>
           <div className="error-message" onClick={(e) => e.stopPropagation()}>
-            <div className="error-icon">⚠️</div>
+            <div className="error-icon">!</div>
             <div className="error-text">{errorMessage}</div>
             <button className="error-close-button" onClick={hideErrorMessage}>
               ✕ Close
@@ -2069,7 +3337,7 @@ function App() {
           <div className="game-header">
             <div className="compact-game-stats">
               <span className="detective-progress">
-                📋 Case {detectiveQuestionCount} of {detectiveMaxQuestions}
+                Case {detectiveQuestionCount} of {detectiveMaxQuestions}
               </span>
             </div>
           </div>
@@ -2080,18 +3348,27 @@ function App() {
                 {detectiveClue.clue}
               </div>
             )}
-            
+
             {feedback.show && (
               <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
                 <div className="feedback-message">{feedback.message}</div>
                 {!feedback.correct && (
-                  <div className="correct-answer">
-                    The correct answer is {feedback.correctAnswer}
-                  </div>
+                  <>
+                    <div className="correct-answer">
+                      The correct answer is {feedback.correctAnswer}
+                    </div>
+                    <button
+                      onClick={moveToNextDetectiveQuestion}
+                      className="submit-button detective-submit next-question-btn"
+                      style={{ marginTop: '15px' }}
+                    >
+                      📖 Next Question
+                    </button>
+                  </>
                 )}
               </div>
             )}
-            
+
             {!feedback.show && (
               <div className="detective-inputs">
                 <div className="factor-inputs">
@@ -2107,7 +3384,7 @@ function App() {
                     }}
                     className={`detective-input ${detectiveClue.prefilledPosition === 1 ? 'prefilled' : ''}`}
                     placeholder="First number"
-                    min="1"
+                    min="0"
                     max="12"
                     readOnly={detectiveClue.prefilledPosition === 1}
                   />
@@ -2125,7 +3402,7 @@ function App() {
                     onKeyPress={(e) => e.key === 'Enter' && submitDetectiveAnswer()}
                     className={`detective-input ${detectiveClue.prefilledPosition === 2 ? 'prefilled' : ''}`}
                     placeholder="Second number"
-                    min="1"
+                    min="0"
                     max="12"
                     readOnly={detectiveClue.prefilledPosition === 2}
                   />
@@ -2139,7 +3416,7 @@ function App() {
                       : (!detectiveInput.factor1 || !detectiveInput.factor2)
                   }
                 >
-                  🔍 Solve Case!
+                  🔍 Solve case!
                 </button>
               </div>
             )}
@@ -2147,10 +3424,10 @@ function App() {
 
           <div className="game-controls">
             <button onClick={endGame} className="done-button">
-              🎆 Close Detective Agency!
+              🎆 Close detective agency!
             </button>
             <button onClick={backToMenu} className="back-button">
-              🏠 Return to Kingdom
+              🏠 Return to kingdom
             </button>
           </div>
         </div>
@@ -2159,16 +3436,16 @@ function App() {
           <div className="game-header">
             <div className="compact-game-stats">
               {(gameMode === 'timed' || gameMode === 'advanced') && (
-                <span className="timer">⏳ {timeLeft}s</span>
+                <span className="timer">{timeLeft}s</span>
               )}
               <span className="score">
-                🏆 {score.correct}/{score.total}
+                {score.correct}/{score.total}
                 {isMultiplayer && currentStreak > 0 && (
-                  <span className="streak"> 🔥{currentStreak}</span>
+                  <span className="streak"> {currentStreak} streak</span>
                 )}
               </span>
               {isMultiplayer && (
-                <span className="session-indicator">📋 {sessionCode}</span>
+                <span className="session-indicator">{sessionCode}</span>
               )}
             </div>
           </div>
@@ -2208,7 +3485,7 @@ function App() {
                   autoFocus
                 />
                 <button onClick={submitAnswer} className="submit-button">
-                  ⚔️ Attack Monster!
+                  Attack Monster!
                 </button>
               </>
             )}
@@ -2217,11 +3494,11 @@ function App() {
           <div className="game-controls">
             {gameMode === 'unlimited' && (
               <button onClick={endGame} className="done-button">
-                🎆 Victory Celebration!
+                Victory Celebration!
               </button>
             )}
             <button onClick={backToMenu} className="back-button">
-              🏠 Return to Kingdom
+              🏠 Return to kingdom
             </button>
           </div>
         </div>

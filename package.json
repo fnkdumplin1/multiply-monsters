@@ -1,6 +1,6 @@
 {
   "name": "multiplication-trainer",
-  "version": "0.1.0",
+  "version": "3.0.1",
   "homepage": ".",
   "private": true,
   "dependencies": {
