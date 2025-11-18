@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import {
   createSession,
@@ -17,14 +18,98 @@ import {
   listenToSquadBattle
 } from './multiplayerUtils';
 
-function App() {
-  const [gameMode, setGameMode] = useState('nameInput');
+// Map URL paths to game modes
+const pathToMode = {
+  '/': 'nameInput',
+  '/menu': 'menu',
+  '/training': 'unlimited',
+  '/timed': 'timed',
+  '/advanced': 'advanced',
+  '/detective': 'detective',
+  '/two-digit': 'twoDigit',
+  '/multiplayer': 'multiplayerSelect',
+  '/multiplayer/create': 'createSession',
+  '/multiplayer/join': 'joinSession',
+  '/multiplayer/lobby/teacher': 'teacherLobby',
+  '/multiplayer/lobby/student': 'studentLobby',
+  '/multiplayer/monitor': 'teacherMonitor',
+  '/multiplayer/results': 'multiplayerResults',
+  '/squad': 'squadSelect',
+  '/squad/create': 'createSquadBattle',
+  '/squad/join': 'joinSquadBattle',
+  '/squad/lobby': 'squadLobby',
+  '/squad/battle': 'squadBattle',
+  '/squad/survival': 'squadSurvival',
+  '/squad/results': 'squadResults',
+  '/results': 'results',
+  '/changelog': 'changelog'
+};
+
+const modeToPath = {
+  'nameInput': '/',
+  'menu': '/menu',
+  'unlimited': '/training',
+  'timed': '/timed',
+  'advanced': '/advanced',
+  'detective': '/detective',
+  'twoDigit': '/two-digit',
+  'multiplayerSelect': '/multiplayer',
+  'createSession': '/multiplayer/create',
+  'joinSession': '/multiplayer/join',
+  'teacherLobby': '/multiplayer/lobby/teacher',
+  'studentLobby': '/multiplayer/lobby/student',
+  'teacherMonitor': '/multiplayer/monitor',
+  'multiplayerResults': '/multiplayer/results',
+  'squadSelect': '/squad',
+  'createSquadBattle': '/squad/create',
+  'joinSquadBattle': '/squad/join',
+  'squadLobby': '/squad/lobby',
+  'squadBattle': '/squad/battle',
+  'squadSurvival': '/squad/survival',
+  'squadResults': '/squad/results',
+  'results': '/results',
+  'changelog': '/changelog'
+};
+
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const [gameMode, setGameModeInternal] = useState(pathToMode[location.pathname] || 'nameInput');
   const [userName, setUserName] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState({ a: 0, b: 0 });
-  
+
+  // Custom setGameMode that also updates the URL
+  const setGameMode = useCallback((mode) => {
+    setGameModeInternal(mode);
+    const path = modeToPath[mode] || '/';
+    if (location.pathname !== path) {
+      navigate(path);
+    }
+  }, [navigate, location.pathname]);
+
+  // Sync gameMode with URL changes (browser back/forward)
+  useEffect(() => {
+    const mode = pathToMode[location.pathname];
+    if (mode && mode !== gameMode) {
+      setGameModeInternal(mode);
+    }
+  }, [location.pathname, gameMode]);
+
   // App version and changelog
-  const APP_VERSION = 'v3.2.0';
+  const APP_VERSION = 'v3.3.0';
   const CHANGELOG = [
+    {
+      version: 'v3.3.0',
+      date: '11-18-2025',
+      features: [
+        'URL-based routing for all game modes and screens',
+        'Browser back/forward navigation support',
+        'Direct URL access to specific game modes',
+        'Improved web-based navigation and bookmarking',
+        'React Router integration with 20+ routes'
+      ]
+    },
     {
       version: 'v3.2.0',
       date: '11-17-2025',
@@ -3933,6 +4018,16 @@ function App() {
         </div>
       )}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/*" element={<AppContent />} />
+      </Routes>
+    </Router>
   );
 }
 
