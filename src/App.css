@@ -2810,10 +2810,319 @@ body:has(input:focus) .mode-button::before {
     font-size: 1.2rem;
     padding: 15px 10px;
   }
-  
+
   .detective-input {
     width: 120px;
     padding: 12px 15px;
+  }
+}
+
+/* Two-Digit Mode Styles */
+.twodigit-container {
+  background: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 10px 25px rgba(0, 0, 0, 0.1),
+    0 4px 6px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  max-width: 600px;
+  width: 90%;
+  margin: 0 20px;
+  position: relative;
+  z-index: 1;
+  animation: none;
+  transform: translateZ(0);
+  will-change: box-shadow;
+}
+
+.twodigit-progress {
+  background: var(--white);
+  color: var(--blue-700);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 2px solid var(--blue-600);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.twodigit-question-container {
+  margin-bottom: 30px;
+}
+
+.vertical-multiplication-work {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 30px 0;
+}
+
+.work-area {
+  background: linear-gradient(135deg, rgba(46, 139, 255, 0.05), rgba(91, 165, 255, 0.05));
+  border: 3px solid var(--blue-600);
+  border-radius: 20px;
+  padding: 30px 40px;
+  box-shadow: 0 4px 15px rgba(46, 139, 255, 0.2);
+}
+
+.carry-column {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  margin-bottom: 5px;
+  margin-left: calc(50px + 70px + 20px + 4px + 4px); /* Position above tens place, shifted more left */
+}
+
+.carry-space {
+  width: 50px;
+}
+
+.carry-input {
+  width: 40px;
+  height: 32px;
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  text-align: center;
+  border: 1px dashed var(--blue-400);
+  border-radius: 6px;
+  background: rgba(46, 139, 255, 0.05);
+  color: var(--blue-700);
+  outline: none;
+}
+
+.carry-input:focus {
+  border-color: var(--blue-600);
+  background: var(--white);
+  box-shadow: 0 0 0 2px rgba(46, 139, 255, 0.2);
+}
+
+.carry-input.small {
+  width: 30px;
+  height: 28px;
+  font-size: 0.9rem;
+}
+
+.addition-carry-row {
+  display: grid;
+  grid-template-columns: 50px 70px 70px 70px 70px;
+  gap: 4px;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.multiplicand-row,
+.multiplier-row,
+.partial-product-row,
+.sum-row {
+  display: grid;
+  grid-template-columns: 50px 70px 70px 70px 70px;
+  gap: 4px;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.times-symbol-work {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--blue-700);
+  text-align: center;
+  width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.digit-display {
+  width: 70px;
+  height: 70px;
+  font-family: 'Courier New', monospace;
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: var(--blue-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+}
+
+.digit-display.placeholder-zero {
+  background: rgba(46, 139, 255, 0.1);
+  color: var(--blue-500);
+}
+
+.digit-input {
+  width: 70px;
+  height: 70px;
+  font-family: 'Courier New', monospace;
+  font-size: 2.5rem;
+  font-weight: bold;
+  text-align: center;
+  border: 2px solid var(--blue-400);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--blue-700);
+  outline: none;
+  transition: all 0.2s;
+}
+
+.digit-input:focus {
+  border-color: var(--blue-600);
+  box-shadow: 0 0 0 3px rgba(46, 139, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.work-line {
+  width: 100%;
+  height: 3px;
+  background: var(--blue-700);
+  margin: 12px 0;
+  grid-column: 1 / -1;
+}
+
+.twodigit-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.twodigit-feedback-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mode-card.twodigit {
+  background: linear-gradient(135deg, var(--blue-600), var(--blue-500));
+  border-color: var(--blue-600);
+}
+
+.mode-card.twodigit:hover {
+  border-color: var(--blue-600);
+  box-shadow: 0 4px 6px rgba(46, 139, 255, 0.15), 0 2px 4px rgba(46, 139, 255, 0.06);
+}
+
+/* Mobile optimizations for Two-Digit Mode */
+@media (max-width: 768px) {
+  .twodigit-container {
+    padding: 30px 20px;
+    max-width: 95%;
+    margin: 0 10px;
+  }
+
+  .work-area {
+    padding: 20px 25px;
+  }
+
+  .carry-column {
+    margin-left: calc(40px + 55px + 15px + 3px + 3px);
+  }
+
+  .addition-carry-row {
+    grid-template-columns: 40px 55px 55px 55px 55px;
+    gap: 3px;
+  }
+
+  .carry-input.small {
+    width: 25px;
+    height: 24px;
+    font-size: 0.8rem;
+  }
+
+  .multiplicand-row,
+  .multiplier-row,
+  .partial-product-row,
+  .sum-row {
+    grid-template-columns: 40px 55px 55px 55px 55px;
+    gap: 3px;
+  }
+
+  .carry-space {
+    width: 40px;
+  }
+
+  .digit-display,
+  .digit-input {
+    width: 55px;
+    height: 55px;
+    font-size: 2rem;
+  }
+
+  .carry-input {
+    width: 35px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+
+  .times-symbol-work {
+    font-size: 1.5rem;
+    width: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .work-area {
+    padding: 15px 20px;
+  }
+
+  .carry-column {
+    margin-left: calc(35px + 50px + 12px + 2px + 2px);
+  }
+
+  .addition-carry-row {
+    grid-template-columns: 35px 50px 50px 50px 50px;
+    gap: 2px;
+  }
+
+  .carry-input.small {
+    width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+  }
+
+  .multiplicand-row,
+  .multiplier-row,
+  .partial-product-row,
+  .sum-row {
+    grid-template-columns: 35px 50px 50px 50px 50px;
+    gap: 2px;
+  }
+
+  .carry-space {
+    width: 35px;
+  }
+
+  .digit-display,
+  .digit-input {
+    width: 50px;
+    height: 50px;
+    font-size: 1.8rem;
+  }
+
+  .carry-input {
+    width: 30px;
+    height: 28px;
+    font-size: 0.85rem;
+  }
+
+  .times-symbol-work {
+    font-size: 1.3rem;
+    width: 35px;
   }
 }
 

@@ -23,8 +23,21 @@ function App() {
   const [currentQuestion, setCurrentQuestion] = useState({ a: 0, b: 0 });
   
   // App version and changelog
-  const APP_VERSION = 'v3.0.1';
+  const APP_VERSION = 'v3.2.0';
   const CHANGELOG = [
+    {
+      version: 'v3.2.0',
+      date: '11-17-2025',
+      features: [
+        'New Two-Digit Multiplication Mode: 10-question practice with step-by-step working',
+        'Traditional vertical multiplication layout with proper digit alignment',
+        'Carry digit inputs for multiplication (above problem) and addition (above partial products)',
+        'Detailed feedback showing which rows are incorrect (first partial product, second partial product, or sum)',
+        'Student choice after wrong answers: "Try Again" to correct work or "Next Question" to continue',
+        'Crypto-secure random generation for two-digit numbers (10-99)',
+        'Auto-advance after correct answers, manual control after incorrect answers'
+      ]
+    },
     {
       version: 'v3.0.1',
       date: '11-04-2025',
@@ -102,6 +115,17 @@ function App() {
   const [detectiveInput, setDetectiveInput] = useState({ factor1: '', factor2: '' });
   const [detectiveQuestionCount, setDetectiveQuestionCount] = useState(0);
   const detectiveMaxQuestions = 10;
+
+  // Two-Digit mode states
+  const [twoDigitQuestionCount, setTwoDigitQuestionCount] = useState(0);
+  const twoDigitMaxQuestions = 10;
+  const [twoDigitWork, setTwoDigitWork] = useState({
+    carry1: '', carry2: '', // Carry digits above tens and hundreds places for multiplication
+    addCarry1: '', addCarry2: '', addCarry3: '', // Carry digits for addition (tens, hundreds, thousands)
+    row1: { ones: '', tens: '', hundreds: '', thousands: '' }, // First partial product
+    row2: { ones: '0', tens: '', hundreds: '', thousands: '' }, // Second partial product (ones place is always 0)
+    sum: { ones: '', tens: '', hundreds: '', thousands: '' } // Final sum
+  });
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [timeLeft, setTimeLeft] = useState(60);
   const [gameActive, setGameActive] = useState(false);
@@ -1087,6 +1111,147 @@ function App() {
     startBackgroundMusic();
   };
 
+  const startTwoDigit = () => {
+    initializeAudio(); // Initialize audio on game start
+    playSound('click');
+    trackEvent('game_start', 'Game', 'Two-Digit Multiplication');
+    setGameMode('twoDigit');
+    setPreviousGameMode('twoDigit');
+    setScore({ correct: 0, total: 0 });
+    setTwoDigitQuestionCount(1); // Start with question 1
+    setUsedQuestions(new Set()); // Clear used questions for new session
+    setGameActive(true);
+    generateTwoDigitQuestion();
+    startBackgroundMusic();
+  };
+
+  const generateTwoDigitQuestion = () => {
+    console.log(`🔢 Generating two-digit question for ${userName}`);
+
+    // Helper function for crypto-secure random generation
+    const getRandomInt = (min, max) => {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const array = new Uint32Array(1);
+        window.crypto.getRandomValues(array);
+        return min + (array[0] % (max - min + 1));
+      }
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    };
+
+    // Generate two-digit numbers (10-99)
+    const a = getRandomInt(10, 99);
+    const b = getRandomInt(10, 99);
+
+    setCurrentQuestion({ a, b });
+    console.log(`✅ New two-digit question: ${a} × ${b} = ?`);
+    setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    setUserAnswer(''); // Clear answer state
+
+    // Reset work state
+    setTwoDigitWork({
+      carry1: '', carry2: '',
+      addCarry1: '', addCarry2: '', addCarry3: '',
+      row1: { ones: '', tens: '', hundreds: '', thousands: '' },
+      row2: { ones: '0', tens: '', hundreds: '', thousands: '' },
+      sum: { ones: '', tens: '', hundreds: '', thousands: '' }
+    });
+  };
+
+  const submitTwoDigitAnswer = () => {
+    initializeAudio();
+    playSound('submit');
+
+    const a = currentQuestion.a;
+    const b = currentQuestion.b;
+
+    // Extract digits from a and b
+    const a1 = Math.floor(a / 10); // tens digit of a
+    const a0 = a % 10; // ones digit of a
+    const b1 = Math.floor(b / 10); // tens digit of b
+    const b0 = b % 10; // ones digit of b
+
+    // Calculate correct partial products
+    const partialProduct1 = a * b0; // First row (multiply by ones digit of b)
+    const partialProduct2 = a * b1 * 10; // Second row (multiply by tens digit of b, shifted)
+    const finalProduct = a * b;
+
+    // Convert to digit strings for comparison
+    const pp1String = partialProduct1.toString().padStart(4, '0');
+    const pp2String = partialProduct2.toString().padStart(4, '0');
+    const sumString = finalProduct.toString().padStart(4, '0');
+
+    // Get user's answers
+    const userRow1 = (twoDigitWork.row1.thousands || '0') + (twoDigitWork.row1.hundreds || '0') + (twoDigitWork.row1.tens || '0') + (twoDigitWork.row1.ones || '0');
+    const userRow2 = (twoDigitWork.row2.thousands || '0') + (twoDigitWork.row2.hundreds || '0') + (twoDigitWork.row2.tens || '0') + (twoDigitWork.row2.ones || '0');
+    const userSum = (twoDigitWork.sum.thousands || '0') + (twoDigitWork.sum.hundreds || '0') + (twoDigitWork.sum.tens || '0') + (twoDigitWork.sum.ones || '0');
+
+    // Check if all work is correct
+    const row1Correct = parseInt(userRow1) === partialProduct1;
+    const row2Correct = parseInt(userRow2) === partialProduct2;
+    const sumCorrect = parseInt(userSum) === finalProduct;
+    const isCorrect = row1Correct && row2Correct && sumCorrect;
+
+    // Track answer submission
+    trackEvent('answer_submitted', 'Gameplay', `twoDigit - ${isCorrect ? 'Correct' : 'Incorrect'}`, finalProduct);
+
+    setScore(prev => ({
+      correct: prev.correct + (isCorrect ? 1 : 0),
+      total: prev.total + 1
+    }));
+
+    setTimeout(() => {
+      if (isCorrect) {
+        playSound('correct');
+        const encouragingMessages = [
+          `👾 Monster defeated, ${userName}!`,
+          `🎃 Spook-tacular work, ${userName}!`,
+          `🦄 Magical math powers, ${userName}!`,
+          `🐲 Dragon slayer, ${userName}!`,
+          `🚀 Rocket monster, ${userName}!`
+        ];
+        const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
+        setFeedback({ show: true, correct: true, message: randomMessage, correctAnswer: finalProduct });
+
+        // Auto-advance on correct answer
+        setTimeout(() => {
+          setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+          if (gameActive) {
+            if (twoDigitQuestionCount < twoDigitMaxQuestions) {
+              setTwoDigitQuestionCount(prev => prev + 1);
+              generateTwoDigitQuestion();
+            } else {
+              endGame();
+            }
+          }
+        }, 1500);
+      } else {
+        playSound('incorrect');
+        let errorMessage = '🤔 Check your work! ';
+        if (!row1Correct) errorMessage += `First row should be ${partialProduct1}. `;
+        if (!row2Correct) errorMessage += `Second row should be ${partialProduct2}. `;
+        if (!sumCorrect) errorMessage += `Sum should be ${finalProduct}.`;
+        setFeedback({ show: true, correct: false, message: errorMessage, correctAnswer: finalProduct });
+        // Don't auto-advance on wrong answer - user chooses
+      }
+    }, 150);
+  };
+
+  const moveToNextTwoDigitQuestion = () => {
+    setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    if (gameActive) {
+      if (twoDigitQuestionCount < twoDigitMaxQuestions) {
+        setTwoDigitQuestionCount(prev => prev + 1);
+        generateTwoDigitQuestion();
+      } else {
+        endGame();
+      }
+    }
+  };
+
+  const retryTwoDigitQuestion = () => {
+    setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+  };
+
   const submitDetectiveAnswer = () => {
     let factor1 = parseInt(detectiveInput.factor1);
     let factor2 = parseInt(detectiveInput.factor2);
@@ -1343,12 +1508,23 @@ function App() {
     questionTimeoutRef.current = setTimeout(() => {
       // Always clear feedback regardless of game state
       setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
-      
+
       // Only generate new question if game is still active
       if (gameActive) {
-        generateQuestion();
+        // Handle two-digit mode progression
+        if (gameMode === 'twoDigit') {
+          if (twoDigitQuestionCount < twoDigitMaxQuestions) {
+            setTwoDigitQuestionCount(prev => prev + 1);
+            generateTwoDigitQuestion();
+          } else {
+            // End game after 10 questions
+            endGame();
+          }
+        } else {
+          generateQuestion();
+        }
       }
-      
+
       questionTimeoutRef.current = null;
     }, feedbackDuration);
     
@@ -1628,12 +1804,20 @@ function App() {
                     <p>Practice basics</p>
                   </div>
                 </button>
-                
+
                 <button className="mode-card detective" onClick={startDetective}>
                   <div className="card-icon">🕵️</div>
                   <div className="card-content">
                     <h4>Detective</h4>
                     <p>Solve mysteries</p>
+                  </div>
+                </button>
+
+                <button className="mode-card twodigit" onClick={startTwoDigit}>
+                  <div className="card-icon">🔢</div>
+                  <div className="card-content">
+                    <h4>Two-Digit</h4>
+                    <p>10 questions</p>
                   </div>
                 </button>
               </div>
@@ -3341,7 +3525,7 @@ function App() {
               </span>
             </div>
           </div>
-          
+
           <div className="detective-clue-container">
             {!feedback.show && (
               <div className="detective-clue">
@@ -3407,11 +3591,11 @@ function App() {
                     readOnly={detectiveClue.prefilledPosition === 2}
                   />
                 </div>
-                <button 
-                  onClick={submitDetectiveAnswer} 
+                <button
+                  onClick={submitDetectiveAnswer}
                   className="submit-button detective-submit"
                   disabled={
-                    detectiveClue.type === 'divisionPrep' 
+                    detectiveClue.type === 'divisionPrep'
                       ? (detectiveClue.prefilledPosition === 1 ? !detectiveInput.factor2 : !detectiveInput.factor1)
                       : (!detectiveInput.factor1 || !detectiveInput.factor2)
                   }
@@ -3428,6 +3612,251 @@ function App() {
             </button>
             <button onClick={backToMenu} className="back-button">
               🏠 Return to kingdom
+            </button>
+          </div>
+        </div>
+      ) : gameMode === 'twoDigit' ? (
+        <div className="twodigit-container">
+          <div className="game-header">
+            <div className="compact-game-stats">
+              <span className="twodigit-progress">
+                Question {twoDigitQuestionCount} of {twoDigitMaxQuestions}
+              </span>
+              <span className="score">
+                {score.correct}/{score.total}
+              </span>
+            </div>
+          </div>
+
+          <div className="twodigit-question-container">
+            {!feedback.show && (
+              <div className="vertical-multiplication-work">
+                <div className="work-area">
+                  {/* Multiplication carry digits - stacked vertically above tens place */}
+                  <div className="carry-column">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="carry-input"
+                      value={twoDigitWork.carry2}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, carry2: e.target.value.replace(/\D/g, '') }))}
+                      placeholder=" "
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="carry-input"
+                      value={twoDigitWork.carry1}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, carry1: e.target.value.replace(/\D/g, '') }))}
+                      placeholder=" "
+                    />
+                  </div>
+
+                  {/* Multiplicand (top number) */}
+                  <div className="multiplicand-row">
+                    <div className="carry-space"></div>
+                    <div className="carry-space"></div>
+                    <div className="carry-space"></div>
+                    <div className="digit-display">{Math.floor(currentQuestion.a / 10)}</div>
+                    <div className="digit-display">{currentQuestion.a % 10}</div>
+                  </div>
+
+                  {/* Multiplier (bottom number with × symbol) */}
+                  <div className="multiplier-row">
+                    <div className="carry-space"></div>
+                    <div className="carry-space"></div>
+                    <span className="times-symbol-work">×</span>
+                    <div className="digit-display">{Math.floor(currentQuestion.b / 10)}</div>
+                    <div className="digit-display">{currentQuestion.b % 10}</div>
+                  </div>
+
+                  {/* Horizontal line */}
+                  <div className="work-line"></div>
+
+                  {/* Addition carry digits - horizontally above first partial product */}
+                  <div className="addition-carry-row">
+                    <div className="carry-space"></div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="carry-input small"
+                      value={twoDigitWork.addCarry3}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, addCarry3: e.target.value.replace(/\D/g, '') }))}
+                      placeholder=" "
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="carry-input small"
+                      value={twoDigitWork.addCarry2}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, addCarry2: e.target.value.replace(/\D/g, '') }))}
+                      placeholder=" "
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="carry-input small"
+                      value={twoDigitWork.addCarry1}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, addCarry1: e.target.value.replace(/\D/g, '') }))}
+                      placeholder=" "
+                    />
+                    <div className="carry-space"></div>
+                  </div>
+
+                  {/* First partial product row */}
+                  <div className="partial-product-row">
+                    <div className="carry-space"></div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.row1.thousands}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row1: { ...prev.row1, thousands: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.row1.hundreds}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row1: { ...prev.row1, hundreds: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.row1.tens}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row1: { ...prev.row1, tens: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.row1.ones}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row1: { ...prev.row1, ones: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                  </div>
+
+                  {/* Second partial product row (with placeholder 0) */}
+                  <div className="partial-product-row">
+                    <div className="carry-space"></div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.row2.thousands}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row2: { ...prev.row2, thousands: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.row2.hundreds}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row2: { ...prev.row2, hundreds: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.row2.tens}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row2: { ...prev.row2, tens: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                    <div className="digit-display placeholder-zero">0</div>
+                  </div>
+
+                  {/* Addition line */}
+                  <div className="work-line"></div>
+
+                  {/* Sum row */}
+                  <div className="sum-row">
+                    <div className="carry-space"></div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.sum.thousands}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, sum: { ...prev.sum, thousands: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.sum.hundreds}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, sum: { ...prev.sum, hundreds: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.sum.tens}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, sum: { ...prev.sum, tens: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength="1"
+                      className="digit-input"
+                      value={twoDigitWork.sum.ones}
+                      onChange={(e) => setTwoDigitWork(prev => ({ ...prev, sum: { ...prev.sum, ones: e.target.value.replace(/\D/g, '') } }))}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={submitTwoDigitAnswer}
+                  className="submit-button twodigit-submit"
+                  style={{ marginTop: '20px' }}
+                >
+                  Check Answer
+                </button>
+              </div>
+            )}
+
+            {feedback.show && (
+              <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
+                <div className="feedback-message">{feedback.message}</div>
+                {!feedback.correct && (
+                  <div className="twodigit-feedback-buttons">
+                    <button
+                      onClick={retryTwoDigitQuestion}
+                      className="submit-button retry-button"
+                      style={{ marginTop: '15px', marginRight: '10px' }}
+                    >
+                      🔄 Try Again
+                    </button>
+                    <button
+                      onClick={moveToNextTwoDigitQuestion}
+                      className="submit-button next-button"
+                      style={{ marginTop: '15px' }}
+                    >
+                      ➡️ Next Question
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="game-controls">
+            <button onClick={endGame} className="done-button">
+              Done
+            </button>
+            <button onClick={backToMenu} className="back-button">
+              Back to Menu
             </button>
           </div>
         </div>
