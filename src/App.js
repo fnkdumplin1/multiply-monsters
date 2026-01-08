@@ -97,8 +97,20 @@ function AppContent() {
   }, [location.pathname, gameMode]);
 
   // App version and changelog
-  const APP_VERSION = 'v3.3.0';
+  const APP_VERSION = 'v3.3.1';
   const CHANGELOG = [
+    {
+      version: 'v3.3.1',
+      date: '01-08-2026',
+      features: [
+        'Fixed critical timer bug causing screen flickering and audio overlap',
+        'Resolved duplicate endGame() calls in timed modes',
+        'Enhanced multiplayer timer with transition detection',
+        'Added gameActive guards to prevent multiple timer callbacks',
+        'Cleaned up non-functional sound effect calls',
+        'Improved timer reliability across all game modes'
+      ]
+    },
     {
       version: 'v3.3.0',
       date: '11-18-2025',
@@ -1673,17 +1685,17 @@ function AppContent() {
           const elapsed = Math.floor((now - startTime) / 1000);
           const remaining = Math.max(0, (sessionData.timeLimit || 60) - elapsed);
 
-          setTimeLeft(remaining);
-
-          if (remaining === 0) {
-            if (gameMode === 'teacherMonitor') {
-              setGameActive(false);
-              playSound('end');
-            } else {
-              playSound('end');
-              endGame();
+          setTimeLeft(prev => {
+            // Only trigger end game once when transitioning from >0 to 0
+            if (prev > 0 && remaining === 0) {
+              if (gameMode === 'teacherMonitor') {
+                setGameActive(false);
+              } else {
+                endGame();
+              }
             }
-          }
+            return remaining;
+          });
         }, 1000);
       }
     } else if (gameMode === 'squadBattle' && gameActive) {
@@ -1696,16 +1708,15 @@ function AppContent() {
           playSound('countdownFinal');
         }
         timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      } else if (timeLeft === 0) {
+      } else if (timeLeft === 0 && gameActive) {
         setGameActive(false);
-        playSound('end');
         // Results will be shown by the component when timeLeft === 0
       }
     } else if (!isMultiplayer) {
       // Single player mode: use local timer with feedback pausing
       if ((gameMode === 'timed' || gameMode === 'advanced') && timeLeft > 0 && gameActive && !feedback.show) {
         timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      } else if ((gameMode === 'timed' || gameMode === 'advanced') && timeLeft === 0) {
+      } else if ((gameMode === 'timed' || gameMode === 'advanced') && timeLeft === 0 && gameActive) {
         endGame();
       }
     }
@@ -1770,7 +1781,7 @@ function AppContent() {
       const activePlayers = squadData.players.filter(p => !p.isEliminated);
       const gameOver = activePlayers.length <= 1;
       if (gameOver && squadData.isStarted) {
-        playSound('end');
+        // Game over - no sound needed (end music plays via playEndMusic)
       }
     }
   }, [gameMode, squadData?.players, squadData?.isStarted]);
