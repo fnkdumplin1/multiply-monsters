@@ -2124,7 +2124,7 @@ body:has(input:focus) .mode-button::before {
   outline: none;
   box-sizing: border-box;
   display: inline-block;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .answer-input:focus {
@@ -2146,7 +2146,7 @@ body:has(input:focus) .mode-button::before {
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-block;
-  vertical-align: top;
+  vertical-align: middle;
   box-sizing: border-box;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
 }
@@ -3263,6 +3263,15 @@ body:has(input:focus) .mode-button::before {
   box-shadow: 0 4px 6px rgba(138, 43, 226, 0.15), 0 2px 4px rgba(138, 43, 226, 0.06);
 }
 
+.mode-card.division {
+  border-color: #f59e0b;
+}
+
+.mode-card.division:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 4px 6px rgba(245, 158, 11, 0.15), 0 2px 4px rgba(245, 158, 11, 0.06);
+}
+
 /* Mobile responsive for card layout */
 @media (max-width: 768px) {
   .game-modes-grid {
@@ -3966,5 +3975,189 @@ h5, h6 {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+  }
+}
+
+/* Division Toggle Component */
+.division-toggle {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 15px;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--gray-100);
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--gray-700);
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.toggle-label:hover {
+  background: var(--gray-200);
+}
+
+.toggle-label input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  background: var(--gray-300);
+  border-radius: 12px;
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: var(--white);
+  border-radius: 50%;
+  transition: transform 0.3s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-slider {
+  background: #f59e0b;
+}
+
+.toggle-label input[type="checkbox"]:checked + .toggle-slider::after {
+  transform: translateX(20px);
+}
+
+/* Long Division Bracket Layout */
+.long-division {
+  display: inline-grid;
+  grid-template-columns: auto auto auto;
+  grid-template-rows: auto auto;
+  margin: 0 20px 20px 0;
+  vertical-align: middle;
+}
+
+.long-division .quotient-input {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: center;
+  width: 90px;
+  text-align: center;
+  font-family: var(--font-family);
+  font-size: 3rem;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: #667eea;
+  border: 2px solid var(--gray-300);
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin-bottom: 2px;
+  background: var(--white);
+}
+
+.long-division .quotient-input:focus {
+  outline: none;
+  border-color: var(--primary-500);
+  box-shadow: 0 0 0 3px rgba(247, 147, 30, 0.2);
+}
+
+.ld-divisor {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  font-family: var(--font-family);
+  font-size: 3rem;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: #667eea;
+  padding-right: 4px;
+  /* offset to align baseline with dividend: border-top (3px) + padding-top (4px) */
+  padding-top: 7px;
+}
+
+.ld-bracket {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: start;
+  width: 16px;
+  height: 56px;
+  color: #667eea;
+}
+
+.ld-vinculum {
+  grid-column: 3;
+  grid-row: 2;
+  border-top: 3px solid #667eea;
+  padding: 4px 14px 6px 8px;
+}
+
+.ld-dividend {
+  font-family: var(--font-family);
+  font-size: 3rem;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  color: #667eea;
+}
+
+/* Long division mobile responsive */
+@media (max-width: 768px) {
+  .long-division .quotient-input {
+    font-size: 2.5rem;
+    width: 76px;
+  }
+
+  .ld-divisor {
+    font-size: 2.5rem;
+    padding-top: 6px;
+  }
+
+  .ld-dividend {
+    font-size: 2.5rem;
+  }
+
+  .ld-bracket {
+    width: 14px;
+    height: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .long-division .quotient-input {
+    font-size: 2rem;
+    width: 64px;
+    padding: 3px 6px;
+  }
+
+  .ld-divisor {
+    font-size: 2rem;
+    padding-top: 5px;
+  }
+
+  .ld-dividend {
+    font-size: 2rem;
+  }
+
+  .ld-bracket {
+    width: 12px;
+    height: 40px;
+  }
+
+  .ld-vinculum {
+    padding: 3px 10px 4px 6px;
   }
 }

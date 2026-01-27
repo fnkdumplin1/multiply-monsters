@@ -21,13 +21,14 @@ export const generateSessionCode = () => {
 };
 
 // Create a new classroom session
-export const createSession = async (teacherName, gameMode, timeLimit) => {
+export const createSession = async (teacherName, gameMode, timeLimit, includeDivision = false) => {
   const code = generateSessionCode();
   const sessionData = {
     code,
     teacherName,
     gameMode, // 'timed', 'advanced', or 'training'
     timeLimit,
+    includeDivision,
     createdAt: serverTimestamp(),
     isActive: true,
     students: [],
@@ -208,12 +209,13 @@ export const generateSquadCode = () => {
 };
 
 // Create a new squad battle
-export const createSquadBattle = async (hostName, battleType) => {
+export const createSquadBattle = async (hostName, battleType, includeDivision = false) => {
   const code = generateSquadCode();
   const squadData = {
     code,
     hostName,
     battleType, // 'quickClash', 'epicDuel', 'survival'
+    includeDivision,
     createdAt: serverTimestamp(),
     isActive: false,
     isStarted: false,

@@ -27,6 +27,7 @@ const pathToMode = {
   '/advanced': 'advanced',
   '/detective': 'detective',
   '/two-digit': 'twoDigit',
+  '/division': 'division',
   '/multiplayer': 'multiplayerSelect',
   '/multiplayer/create': 'createSession',
   '/multiplayer/join': 'joinSession',
@@ -53,6 +54,7 @@ const modeToPath = {
   'advanced': '/advanced',
   'detective': '/detective',
   'twoDigit': '/two-digit',
+  'division': '/division',
   'multiplayerSelect': '/multiplayer',
   'createSession': '/multiplayer/create',
   'joinSession': '/multiplayer/join',
@@ -77,7 +79,7 @@ function AppContent() {
 
   const [gameMode, setGameModeInternal] = useState(pathToMode[location.pathname] || 'nameInput');
   const [userName, setUserName] = useState('');
-  const [currentQuestion, setCurrentQuestion] = useState({ a: 0, b: 0 });
+  const [currentQuestion, setCurrentQuestion] = useState({ a: 0, b: 0, type: 'multiplication' });
 
   // Custom setGameMode that also updates the URL
   const setGameMode = useCallback((mode) => {
@@ -97,8 +99,21 @@ function AppContent() {
   }, [location.pathname, gameMode]);
 
   // App version and changelog
-  const APP_VERSION = 'v3.3.1';
+  const APP_VERSION = 'v3.4.0';
   const CHANGELOG = [
+    {
+      version: 'v3.4.0',
+      date: '01-27-2026',
+      features: [
+        'New Division mode in Solo Adventures for unlimited division practice',
+        'Include Division toggle for Monster Race, Boss Battle, Battle Mode, and Squad Showdown',
+        'Division questions displayed in classic long division bracket format',
+        'Mixed multiplication and division questions when toggle is enabled',
+        'Division questions use inverse multiplication facts with clean integer answers',
+        'Multiplayer support: division toggle synced via Firebase for all players',
+        'Responsive long division layout using CSS Grid for precise alignment'
+      ]
+    },
     {
       version: 'v3.3.1',
       date: '01-08-2026',
@@ -230,6 +245,7 @@ function AppContent() {
   const [scoreHistory, setScoreHistory] = useState({ timed: [], advanced: [] });
   const [previousGameMode, setPreviousGameMode] = useState('unlimited');
   const [usedQuestions, setUsedQuestions] = useState(new Set());
+  const [includeDivision, setIncludeDivision] = useState(false);
 
   // Multiplayer states
   const [isMultiplayer, setIsMultiplayer] = useState(false);
@@ -972,6 +988,16 @@ function AppContent() {
     console.log(`✅ Detective clue generated:`, { type: selectedType, clue, acceptedAnswers });
   };
 
+  const getCorrectAnswer = (question) =>
+    question.type === 'division'
+      ? question.a / question.b
+      : question.a * question.b;
+
+  const getQuestionDisplay = (question) =>
+    question.type === 'division'
+      ? `${question.a} \u00f7 ${question.b}`
+      : `${question.a} \u00d7 ${question.b}`;
+
   const generateQuestion = () => {
     console.log(`🎲 Generating question for ${userName} (${userRole}) in session ${sessionCode}`);
     let a, b;
@@ -1040,11 +1066,18 @@ function AppContent() {
       
     } while (attempts < maxAttempts);
     
-    setCurrentQuestion({ a, b });
-    console.log(`✅ New question set: ${a} × ${b} = ? for ${userName}`);
+    // Decide between multiplication and division when toggle is on
+    if (includeDivision && Math.random() < 0.5) {
+      // Division: product / factor1 = factor2
+      setCurrentQuestion({ a: a * b, b: a, type: 'division' });
+      console.log(`✅ New question set: ${a * b} ÷ ${a} = ? for ${userName}`);
+    } else {
+      setCurrentQuestion({ a, b, type: 'multiplication' });
+      console.log(`✅ New question set: ${a} × ${b} = ? for ${userName}`);
+    }
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
     setUserAnswer(''); // Ensure answer state is cleared for new question
-    
+
     // Clear and focus the answer input when new question appears (for mobile gameplay speed)
     setTimeout(() => {
       if (answerInputRef.current && gameActive) {
@@ -1052,6 +1085,34 @@ function AppContent() {
         answerInputRef.current.focus();
       }
     }, 100); // Small delay to ensure DOM updates
+  };
+
+  const generateDivisionQuestion = () => {
+    console.log(`➗ Generating division question for ${userName}`);
+    const getRandomFactor = () => {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const array = new Uint32Array(1);
+        window.crypto.getRandomValues(array);
+        return 1 + (array[0] % 12);
+      }
+      return Math.floor(Math.random() * 12) + 1;
+    };
+
+    const factor1 = getRandomFactor();
+    const factor2 = getRandomFactor();
+    const product = factor1 * factor2;
+
+    setCurrentQuestion({ a: product, b: factor1, type: 'division' });
+    console.log(`✅ New division question: ${product} ÷ ${factor1} = ? for ${userName}`);
+    setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    setUserAnswer('');
+
+    setTimeout(() => {
+      if (answerInputRef.current && gameActive) {
+        answerInputRef.current.value = '';
+        answerInputRef.current.focus();
+      }
+    }, 100);
   };
 
   const validateName = (name) => {
@@ -1222,6 +1283,19 @@ function AppContent() {
     startBackgroundMusic();
   };
 
+  const startDivision = () => {
+    initializeAudio();
+    playSound('click');
+    trackEvent('game_start', 'Game', 'Division Mode');
+    setGameMode('division');
+    setPreviousGameMode('division');
+    setScore({ correct: 0, total: 0 });
+    setUsedQuestions(new Set());
+    setGameActive(true);
+    generateDivisionQuestion();
+    startBackgroundMusic();
+  };
+
   const generateTwoDigitQuestion = () => {
     console.log(`🔢 Generating two-digit question for ${userName}`);
 
@@ -1239,7 +1313,7 @@ function AppContent() {
     const a = getRandomInt(10, 99);
     const b = getRandomInt(10, 99);
 
-    setCurrentQuestion({ a, b });
+    setCurrentQuestion({ a, b, type: 'multiplication' });
     console.log(`✅ New two-digit question: ${a} × ${b} = ?`);
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
     setUserAnswer(''); // Clear answer state
@@ -1507,9 +1581,9 @@ function AppContent() {
     initializeAudio(); // Initialize audio on interaction
     playSound('submit');
 
-    const correctAnswer = currentQuestion.a * currentQuestion.b;
+    const correctAnswer = getCorrectAnswer(currentQuestion);
     const isCorrect = parseInt(userAnswer) === correctAnswer;
-    
+
     // Track answer submission
     trackEvent('answer_submitted', 'Gameplay', `${gameMode} - ${isCorrect ? 'Correct' : 'Incorrect'}`, correctAnswer);
     
@@ -1617,6 +1691,8 @@ function AppContent() {
             // End game after 10 questions
             endGame();
           }
+        } else if (gameMode === 'division') {
+          generateDivisionQuestion();
         } else {
           generateQuestion();
         }
@@ -1740,6 +1816,7 @@ function AppContent() {
   useEffect(() => {
     if (gameMode === 'squadLobby' && squadData?.isStarted) {
       playSound('start');
+      setIncludeDivision(squadData?.includeDivision || false);
 
       // Set appropriate game mode based on battle type
       if (squadData.battleType === 'survival') {
@@ -1817,6 +1894,9 @@ function AppContent() {
     setDetectiveQuestionCount(0);
     setDetectiveInput({ factor1: '', factor2: '' });
     setDetectiveClue({ type: '', clue: '', acceptedAnswers: [], prefilledFactor: null, prefilledPosition: null });
+
+    // Reset division toggle
+    setIncludeDivision(false);
   };
 
   const clearHistory = (mode) => {
@@ -1916,11 +1996,27 @@ function AppContent() {
                     <p>10 questions</p>
                   </div>
                 </button>
+
+                <button className="mode-card division" onClick={startDivision}>
+                  <div className="card-icon">➗</div>
+                  <div className="card-content">
+                    <h4>Division</h4>
+                    <p>Practice division</p>
+                  </div>
+                </button>
               </div>
             </div>
-            
+
             <div className="mode-section">
               <h3 className="section-title">Timed Challenges</h3>
+              <div className="division-toggle">
+                <label className="toggle-label">
+                  <input type="checkbox" checked={includeDivision}
+                    onChange={(e) => setIncludeDivision(e.target.checked)} />
+                  <span className="toggle-slider"></span>
+                  Include division
+                </label>
+              </div>
               <div className="mode-cards">
                 <button className="mode-card timed" onClick={startTimed}>
                   <div className="card-icon">⏱️</div>
@@ -2042,7 +2138,7 @@ function AppContent() {
       setSquadBattleType(battleType);
 
       try {
-        const result = await createSquadBattle(userName, battleType);
+        const result = await createSquadBattle(userName, battleType, includeDivision);
         console.log('📊 Squad battle creation result:', result);
 
         if (result.success) {
@@ -2085,6 +2181,14 @@ function AppContent() {
         <div className="menu-container">
           <h1>Choose Your Battle</h1>
           <p>Select a battle type to challenge your friends!</p>
+          <div className="division-toggle">
+            <label className="toggle-label">
+              <input type="checkbox" checked={includeDivision}
+                onChange={(e) => setIncludeDivision(e.target.checked)} />
+              <span className="toggle-slider"></span>
+              Include division questions
+            </label>
+          </div>
           <div className="menu-buttons">
             <button
               className="mode-button squad-battle-type quick-clash-card"
@@ -2214,7 +2318,7 @@ function AppContent() {
           <div className="battle-info">
             <p><strong>Battle Type:</strong> {battleInfo.name}</p>
             <p><strong>Duration:</strong> {battleInfo.time}</p>
-            <p><strong>Difficulty:</strong> 1-12 multiplication tables</p>
+            <p><strong>Difficulty:</strong> 1-12 multiplication tables{squadData?.includeDivision ? ' + Division' : ''}</p>
           </div>
 
           <div className="players-section">
@@ -2377,7 +2481,7 @@ function AppContent() {
   if (gameMode === 'squadBattle') {
     const handleSquadSubmitAnswer = async () => {
       const answer = parseInt(userAnswer);
-      const correctAnswer = currentQuestion.a * currentQuestion.b;
+      const correctAnswer = getCorrectAnswer(currentQuestion);
       const isCorrect = answer === correctAnswer;
 
       if (isCorrect) {
@@ -2392,7 +2496,7 @@ function AppContent() {
         setFeedback({
           show: true,
           correct: true,
-          message: `Correct! ${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}`,
+          message: `Correct! ${getQuestionDisplay(currentQuestion)} = ${correctAnswer}`,
           correctAnswer
         });
         playSound('correct');
@@ -2406,7 +2510,7 @@ function AppContent() {
         setFeedback({
           show: true,
           correct: false,
-          message: `${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}`,
+          message: `${getQuestionDisplay(currentQuestion)} = ${correctAnswer}`,
           correctAnswer
         });
         playSound('incorrect');
@@ -2502,21 +2606,47 @@ function AppContent() {
               </div>
             ) : (
               <>
-                <div className="question">
-                  {currentQuestion.a} × {currentQuestion.b} = ?
-                </div>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={userAnswer}
-                  onChange={(e) => setUserAnswer(e.target.value)}
-                  onKeyPress={handleSquadKeyPress}
-                  className="answer-input"
-                  placeholder="Your answer"
-                  autoFocus
-                  disabled={!gameActive || timeLeft === 0}
-                />
+                {currentQuestion.type === 'division' ? (
+                  <div className="long-division">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={userAnswer}
+                      onChange={(e) => setUserAnswer(e.target.value)}
+                      onKeyPress={handleSquadKeyPress}
+                      className="quotient-input"
+                      placeholder="?"
+                      autoFocus
+                      disabled={!gameActive || timeLeft === 0}
+                    />
+                    <span className="ld-divisor">{currentQuestion.b}</span>
+                    <svg className="ld-bracket" viewBox="0 0 16 64" aria-hidden="true">
+                      <path d="M 13 0 L 13 36 Q 13 62 2 62" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                    </svg>
+                    <div className="ld-vinculum">
+                      <span className="ld-dividend">{currentQuestion.a}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="question">
+                    {currentQuestion.a} × {currentQuestion.b} = ?
+                  </div>
+                )}
+                {currentQuestion.type !== 'division' && (
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onKeyPress={handleSquadKeyPress}
+                    className="answer-input"
+                    placeholder="Your answer"
+                    autoFocus
+                    disabled={!gameActive || timeLeft === 0}
+                  />
+                )}
                 <button
                   onClick={handleSquadSubmitAnswer}
                   disabled={!userAnswer.trim() || !gameActive || timeLeft === 0}
@@ -2573,7 +2703,7 @@ function AppContent() {
 
     const handleSurvivalSubmitAnswer = async () => {
       const answer = parseInt(userAnswer);
-      const correctAnswer = currentQuestion.a * currentQuestion.b;
+      const correctAnswer = getCorrectAnswer(currentQuestion);
       const isCorrect = answer === correctAnswer;
 
       if (isCorrect) {
@@ -2588,7 +2718,7 @@ function AppContent() {
         setFeedback({
           show: true,
           correct: true,
-          message: `Correct! ${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}`,
+          message: `Correct! ${getQuestionDisplay(currentQuestion)} = ${correctAnswer}`,
           correctAnswer
         });
         playSound('correct');
@@ -2604,7 +2734,7 @@ function AppContent() {
           setFeedback({
             show: true,
             correct: false,
-            message: `💀 Eliminated! ${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}`,
+            message: `💀 Eliminated! ${getQuestionDisplay(currentQuestion)} = ${correctAnswer}`,
             correctAnswer
           });
         } else {
@@ -2612,7 +2742,7 @@ function AppContent() {
           setFeedback({
             show: true,
             correct: false,
-            message: `💔 Lost a life! ${currentQuestion.a} × ${currentQuestion.b} = ${correctAnswer}. ${newLives} lives left.`,
+            message: `💔 Lost a life! ${getQuestionDisplay(currentQuestion)} = ${correctAnswer}. ${newLives} lives left.`,
             correctAnswer
           });
         }
@@ -2714,21 +2844,47 @@ function AppContent() {
               </div>
             ) : (
               <>
-                <div className="question">
-                  {currentQuestion.a} × {currentQuestion.b} = ?
-                </div>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={userAnswer}
-                  onChange={(e) => setUserAnswer(e.target.value)}
-                  onKeyPress={handleSurvivalKeyPress}
-                  className="answer-input"
-                  placeholder="Your answer"
-                  autoFocus
-                  disabled={isEliminated || gameOver}
-                />
+                {currentQuestion.type === 'division' ? (
+                  <div className="long-division">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={userAnswer}
+                      onChange={(e) => setUserAnswer(e.target.value)}
+                      onKeyPress={handleSurvivalKeyPress}
+                      className="quotient-input"
+                      placeholder="?"
+                      autoFocus
+                      disabled={isEliminated || gameOver}
+                    />
+                    <span className="ld-divisor">{currentQuestion.b}</span>
+                    <svg className="ld-bracket" viewBox="0 0 16 64" aria-hidden="true">
+                      <path d="M 13 0 L 13 36 Q 13 62 2 62" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                    </svg>
+                    <div className="ld-vinculum">
+                      <span className="ld-dividend">{currentQuestion.a}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="question">
+                    {currentQuestion.a} × {currentQuestion.b} = ?
+                  </div>
+                )}
+                {currentQuestion.type !== 'division' && (
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onKeyPress={handleSurvivalKeyPress}
+                    className="answer-input"
+                    placeholder="Your answer"
+                    autoFocus
+                    disabled={isEliminated || gameOver}
+                  />
+                )}
                 <button
                   onClick={handleSurvivalSubmitAnswer}
                   disabled={!userAnswer.trim() || isEliminated || gameOver}
@@ -2944,7 +3100,7 @@ function AppContent() {
         const timeLimit = selectedGameMode === 'timed' ? 60 : 60; // Both timed modes use 60 seconds
         console.log('📝 Creating session with params:', { userName, selectedGameMode, timeLimit });
         
-        const result = await createSession(userName, selectedGameMode, timeLimit);
+        const result = await createSession(userName, selectedGameMode, timeLimit, includeDivision);
         console.log('📊 Session creation result:', result);
         
         if (result.success) {
@@ -3006,11 +3162,20 @@ function AppContent() {
                 Boss Monster Battle (60 seconds)
               </label>
             </div>
+
+            <div className="division-toggle">
+              <label className="toggle-label">
+                <input type="checkbox" checked={includeDivision}
+                  onChange={(e) => setIncludeDivision(e.target.checked)} />
+                <span className="toggle-slider"></span>
+                Include division questions
+              </label>
+            </div>
           </div>
-          
+
           <div className="menu-buttons">
-            <button 
-              className="mode-button teacher" 
+            <button
+              className="mode-button teacher"
               onClick={handleCreateSession}
               disabled={isCreating}
             >
@@ -3074,10 +3239,11 @@ function AppContent() {
               }
               
               const selectedMode = data.gameMode || 'timed';
+              setIncludeDivision(data.includeDivision || false);
               // Timer will be calculated from server timestamp in useEffect
               setPreviousGameMode(selectedMode);
               setGameMode(selectedMode);
-              
+
               // Start countdown for multiplayer students
               startCountdown(() => {
                 setGameActive(true);
@@ -3217,9 +3383,9 @@ function AppContent() {
           <div className="session-info">
             <h2>Session: {sessionCode}</h2>
             <p>Teacher: {sessionData?.teacherName}</p>
-            <p>Mode: {sessionData?.gameMode === 'timed' ? 'Monster Race (60s)' : 'Boss Battle (60s)'}</p>
+            <p>Mode: {sessionData?.gameMode === 'timed' ? 'Monster Race (60s)' : 'Boss Battle (60s)'}{sessionData?.includeDivision ? ' + Division' : ''}</p>
           </div>
-          
+
           <div className="students-list">
             <h3>👥 Fellow Warriors ({sessionData?.students?.length || 0}):</h3>
             <div className="students-grid">
@@ -3979,11 +4145,35 @@ function AppContent() {
           <div className="question-container">
             {/* In multiplayer, only show question when feedback is not showing */}
             {(!isMultiplayer || (isMultiplayer && !feedback.show)) && (
-              <div className="question">
-                {currentQuestion.a} × {currentQuestion.b} = ?
-              </div>
+              currentQuestion.type === 'division' ? (
+                <div className="long-division">
+                  <input
+                    ref={answerInputRef}
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="quotient-input"
+                    placeholder="?"
+                    autoFocus
+                  />
+                  <span className="ld-divisor">{currentQuestion.b}</span>
+                  <svg className="ld-bracket" viewBox="0 0 16 64" aria-hidden="true">
+                    <path d="M 13 0 L 13 36 Q 13 62 2 62" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                  </svg>
+                  <div className="ld-vinculum">
+                    <span className="ld-dividend">{currentQuestion.a}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="question">
+                  {currentQuestion.a} × {currentQuestion.b} = ?
+                </div>
+              )
             )}
-            
+
             {feedback.show && (
               <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
                 <div className="feedback-message">{feedback.message}</div>
@@ -3994,21 +4184,23 @@ function AppContent() {
                 )}
               </div>
             )}
-            
+
             {!feedback.show && (
               <>
-                <input
-                  ref={answerInputRef}
-                  type="number"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={userAnswer}
-                  onChange={(e) => setUserAnswer(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="answer-input"
-                  placeholder="Your answer"
-                  autoFocus
-                />
+                {currentQuestion.type !== 'division' && (
+                  <input
+                    ref={answerInputRef}
+                    type="number"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="answer-input"
+                    placeholder="Your answer"
+                    autoFocus
+                  />
+                )}
                 <button onClick={submitAnswer} className="submit-button">
                   Attack Monster!
                 </button>
@@ -4017,7 +4209,7 @@ function AppContent() {
           </div>
 
           <div className="game-controls">
-            {gameMode === 'unlimited' && (
+            {(gameMode === 'unlimited' || gameMode === 'division') && (
               <button onClick={endGame} className="done-button">
                 Victory Celebration!
               </button>
