@@ -43,6 +43,47 @@ service cloud.firestore {
       allow delete: if true;
     }
 
+    // Secure rules for teachers collection (Teacher Portal)
+    match /teachers/{teacherId} {
+      // Anyone can read the teacher list (needed for the unauthenticated student dropdown)
+      allow read: if true;
+
+      // A teacher can only create their own doc, keyed by their own Auth UID
+      allow create: if request.auth != null
+                    && request.auth.uid == teacherId
+                    && request.resource.data.displayName is string
+                    && request.resource.data.displayName.size() > 0
+                    && request.resource.data.displayName.size() <= 50;
+
+      // A teacher can only update their own doc
+      allow update: if request.auth != null && request.auth.uid == teacherId;
+
+      // No delete flow in v1
+      allow delete: if false;
+    }
+
+    // Secure rules for usageEvents collection (Teacher Portal)
+    match /usageEvents/{eventId} {
+      // Students (unauthenticated) can log an event, but only well-formed ones,
+      // and only referencing a teacherId that actually exists as a real teacher
+      allow create: if request.resource.data.studentName is string
+                    && request.resource.data.studentName.size() > 0
+                    && request.resource.data.studentName.size() <= 30
+                    && request.resource.data.gameMode in
+                         ['unlimited','timed','advanced','detective','twoDigit','division','squadBattle','squadSurvival']
+                    && request.resource.data.durationSeconds is number
+                    && request.resource.data.durationSeconds >= 0
+                    && request.resource.data.durationSeconds <= 3600
+                    && (request.resource.data.teacherId == null ||
+                        exists(/databases/$(database)/documents/teachers/$(request.resource.data.teacherId)));
+
+      // Immutable log - no edits or deletes after creation
+      allow update, delete: if false;
+
+      // Only the authenticated teacher who owns this event can read it
+      allow read: if request.auth != null && request.auth.uid == resource.data.teacherId;
+    }
+
     // Deny access to all other collections
     match /{document=**} {
       allow read, write: if false;

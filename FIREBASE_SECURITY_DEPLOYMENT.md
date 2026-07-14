@@ -12,6 +12,7 @@ These security rules protect your multiplication trainer app's Firebase database
 - **Score Updates**: Students can update their own scores and streaks
 - **Session Control**: Start/end sessions and update session status
 - **Cleanup**: Delete inactive sessions
+- **Teacher Portal**: Anyone can create a Firebase Auth account and register a `teachers` doc (keyed by their own UID); anyone can read the `teachers` list (needed for the unauthenticated student "select your teacher" dropdown); students (unauthenticated) can log a `usageEvents` entry for a play session
 
 ### 🚫 **Security Protections**
 - Session codes must be exactly 4 characters (A-Z, 0-9)
@@ -20,8 +21,9 @@ These security rules protect your multiplication trainer app's Firebase database
 - Maximum 50 students per session
 - Core session data (teacher, game mode) cannot be modified after creation
 - Scores must be valid (correct ≤ total, non-negative)
-- No access to collections other than 'sessions'
+- No access to collections other than 'sessions', 'squadBattles', 'teachers', and 'usageEvents'
 - Prevents malicious data injection
+- **Teacher Portal**: `teachers` docs can only be created/updated by the authenticated owner of that UID; `usageEvents` are an immutable log (no update/delete) and can only be *read* by the authenticated teacher whose UID matches the event's `teacherId` — a student cannot read another teacher's usage data merely by knowing/guessing a display name, since the check is against the real Firebase Auth UID, not a client-supplied string
 
 ## Deployment Steps
 
@@ -50,88 +52,62 @@ firebase deploy --only firestore:rules
 ```
 
 ### Option 3: Manual Copy-Paste
-Copy this content directly into Firebase Console Rules tab:
+Copy the full, current contents of `firestore.rules` directly into the Firebase Console Rules tab. As of the Teacher Portal feature, that file contains four collections (`sessions`, `squadBattles`, `teachers`, `usageEvents`) plus a catch-all deny — always copy from `firestore.rules` itself rather than this doc, since this doc is a snapshot and can drift out of sync with the real file (as this section previously had). The `teachers`/`usageEvents` blocks specifically:
 
 ```javascript
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /sessions/{sessionId} {
+    // Secure rules for teachers collection (Teacher Portal)
+    match /teachers/{teacherId} {
+      // Anyone can read the teacher list (needed for the unauthenticated student dropdown)
       allow read: if true;
-      allow create: if isValidSessionData(resource.data)
-                    && resource.data.keys().hasAll(['code', 'teacherName', 'gameMode', 'timeLimit', 'createdAt', 'isActive', 'students'])
-                    && resource.data.code == sessionId
-                    && resource.data.code.matches('^[A-Z0-9]{4}$');
-      allow update: if isValidSessionUpdate();
-      allow delete: if resource.data.isActive == false;
+
+      // A teacher can only create their own doc, keyed by their own Auth UID
+      allow create: if request.auth != null
+                    && request.auth.uid == teacherId
+                    && request.resource.data.displayName is string
+                    && request.resource.data.displayName.size() > 0
+                    && request.resource.data.displayName.size() <= 50;
+
+      // A teacher can only update their own doc
+      allow update: if request.auth != null && request.auth.uid == teacherId;
+
+      // No delete flow in v1
+      allow delete: if false;
     }
 
-    function isValidSessionData(data) {
-      return data.teacherName is string
-             && data.teacherName.size() >= 1
-             && data.teacherName.size() <= 50
-             && data.gameMode in ['timed', 'advanced', 'training']
-             && data.timeLimit is number
-             && data.timeLimit >= 30
-             && data.timeLimit <= 1800
-             && data.isActive is bool
-             && data.students is list
-             && data.students.size() <= 50;
-    }
+    // Secure rules for usageEvents collection (Teacher Portal)
+    match /usageEvents/{eventId} {
+      // Students (unauthenticated) can log an event, but only well-formed ones,
+      // and only referencing a teacherId that actually exists as a real teacher
+      allow create: if request.resource.data.studentName is string
+                    && request.resource.data.studentName.size() > 0
+                    && request.resource.data.studentName.size() <= 30
+                    && request.resource.data.gameMode in
+                         ['unlimited','timed','advanced','detective','twoDigit','division','squadBattle','squadSurvival']
+                    && request.resource.data.durationSeconds is number
+                    && request.resource.data.durationSeconds >= 0
+                    && request.resource.data.durationSeconds <= 3600
+                    && (request.resource.data.teacherId == null ||
+                        exists(/databases/$(database)/documents/teachers/$(request.resource.data.teacherId)));
 
-    function isValidSessionUpdate() {
-      let data = resource.data;
-      let incoming = request.resource.data;
-      return data.code == incoming.code
-             && data.teacherName == incoming.teacherName
-             && data.gameMode == incoming.gameMode
-             && data.timeLimit == incoming.timeLimit
-             && data.createdAt == incoming.createdAt
-             && isValidStudentUpdate()
-             && isValidStatusUpdate()
-             && incoming.students.size() <= 50;
-    }
+      // Immutable log - no edits or deletes after creation
+      allow update, delete: if false;
 
-    function isValidStudentUpdate() {
-      let data = resource.data;
-      let incoming = request.resource.data;
-      return incoming.students.size() >= data.students.size()
-             && validateStudentData(incoming.students);
+      // Only the authenticated teacher who owns this event can read it
+      allow read: if request.auth != null && request.auth.uid == resource.data.teacherId;
     }
-
-    function validateStudentData(students) {
-      return students.hasOnly(['name', 'score', 'joinedAt', 'isReady', 'currentStreak', 'bestStreak'])
-             && students.size() > 0 ?
-                students[0].name is string &&
-                students[0].name.size() >= 1 &&
-                students[0].name.size() <= 30 &&
-                students[0].score.keys().hasAll(['correct', 'total']) &&
-                students[0].score.correct is number &&
-                students[0].score.total is number &&
-                students[0].score.correct >= 0 &&
-                students[0].score.total >= 0 &&
-                students[0].score.correct <= students[0].score.total &&
-                students[0].currentStreak is number &&
-                students[0].bestStreak is number &&
-                students[0].currentStreak >= 0 &&
-                students[0].bestStreak >= 0
-                : true;
-    }
-
-    function isValidStatusUpdate() {
-      let incoming = request.resource.data;
-      return incoming.isActive is bool
-             && (incoming.startedAt == null || incoming.startedAt is timestamp)
-             && (incoming.endedAt == null || incoming.endedAt is timestamp);
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
 ```
+
+## Required Firestore Index (Teacher Portal)
+
+The teacher dashboard's `fetchUsageEventsForTeacher` query (`src/teacherUtils.js`) filters `usageEvents` by `teacherId` **and** `startedAt` in the same query. Firestore requires a composite index for any query that combines an equality filter with a range/inequality filter on different fields - unlike `firestore.rules`, this can't be pasted in; it has to be created once per project.
+
+**Without this index, the dashboard silently shows "No usage yet" even when events exist**, and the browser console logs `FirebaseError: The query requires an index.`
+
+To create it:
+1. Play through any mode as a student with a teacher selected, then open that teacher's `/teacher/dashboard` and check the browser console for the error above - it includes a direct "create it here" link with the index pre-filled. Click it and press **Save** in the Firebase Console. *(Or build it manually: Firestore Database → Indexes tab → Add index → collection `usageEvents` → fields `teacherId` Ascending, `startedAt` Ascending.)*
+2. Wait for the index status to show **Enabled** (usually 1-5 minutes for a new collection) before re-testing the dashboard.
+
+This is a one-time setup step per Firebase project (e.g. needed again if you ever point the app at a different `multiply-monsters-classroom`-style project), not something that redeploys with `firestore.rules`.
 
 ## Testing the Rules
 
@@ -176,6 +152,10 @@ After deploying, verify your app still works:
 - Compare your app's data structure with rule requirements
 - Check browser console for specific error messages
 - Test with a fresh session to isolate issues
+
+**Teacher dashboard stuck on "No usage yet" despite students having played:**
+- This is not a rules issue - check the browser console for `FirebaseError: The query requires an index`
+- See [Required Firestore Index (Teacher Portal)](#required-firestore-index-teacher-portal) above
 
 ## Security Benefits
 

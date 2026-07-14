@@ -2105,6 +2105,15 @@ body:has(input:focus) .mode-button::before {
   margin-bottom: 20px;
 }
 
+.answer-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
 .answer-input {
   font-family: var(--font-family);
   font-size: var(--font-size-xl);
@@ -2116,15 +2125,11 @@ body:has(input:focus) .mode-button::before {
   text-align: center;
   width: 200px;
   height: 48px;
-  margin-bottom: 20px;
-  margin-right: 10px;
   background: var(--white);
   color: var(--text-main);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
   box-sizing: border-box;
-  display: inline-block;
-  vertical-align: middle;
 }
 
 .answer-input:focus {
@@ -2164,35 +2169,39 @@ body:has(input:focus) .mode-button::before {
 }
 
 .done-button, .back-button {
-  font-size: 1.1rem;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: var(--font-weight-medium);
+  padding: 8px 16px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  box-shadow: none;
 }
 
 .done-button {
-  background: #ff6b6b;
-  color: white;
+  background: var(--gray-50);
+  color: var(--gray-600);
 }
 
 .done-button:hover {
-  background: #ff5252;
-  transform: translateY(-1px);
-  transition: transform 0.1s ease, background-color 0.1s ease;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border-color: var(--gray-400);
+  transition: background-color 0.1s ease, color 0.1s ease;
 }
 
 .back-button {
-  background: #95a5a6;
-  color: white;
+  background: transparent;
+  color: var(--gray-500);
 }
 
 .back-button:hover {
-  background: #7f8c8d;
-  transform: translateY(-1px);
-  transition: transform 0.1s ease, background-color 0.1s ease;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border-color: var(--gray-400);
+  transition: background-color 0.1s ease, color 0.1s ease;
 }
 
 .results {
@@ -2347,6 +2356,115 @@ body:has(input:focus) .mode-button::before {
 .name-input:focus {
   border-color: var(--blue-500);
   box-shadow: 0 0 0 3px rgba(46, 139, 255, 0.1);
+}
+
+.teacher-select-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.teacher-select-container label {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+.teacher-select {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-tight);
+  padding: 10px 14px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  text-align: center;
+  width: 250px;
+  background: var(--white);
+  color: var(--text-main);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.teacher-select:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 3px rgba(46, 139, 255, 0.1);
+}
+
+.teacher-auth-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--gray-100);
+  border-radius: 10px;
+  padding: 4px;
+  margin: 10px 0;
+}
+
+.teacher-auth-tab {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.teacher-auth-tab.active {
+  background: var(--white);
+  color: var(--primary-500);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.teacher-auth-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.teacher-auth-form .name-input {
+  width: 100%;
+}
+
+.teacher-dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin: 20px auto;
+}
+
+.teacher-report-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+}
+
+.teacher-report-date {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-main);
+}
+
+.teacher-report-row .submit-button {
+  height: auto;
+  padding: 8px 16px;
+  font-size: var(--font-size-sm);
 }
 
 .submit-button:disabled {

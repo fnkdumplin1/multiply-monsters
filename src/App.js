@@ -17,6 +17,16 @@ import {
   eliminatePlayer,
   listenToSquadBattle
 } from './multiplayerUtils';
+import {
+  signUpTeacher,
+  logInTeacher,
+  logOutTeacher,
+  subscribeToAuthState,
+  subscribeToTeachers,
+  logUsageEvent,
+  fetchUsageEventsForTeacher
+} from './teacherUtils';
+import { buildAvailableReports } from './reportUtils';
 
 // Map URL paths to game modes
 const pathToMode = {
@@ -43,7 +53,9 @@ const pathToMode = {
   '/squad/survival': 'squadSurvival',
   '/squad/results': 'squadResults',
   '/results': 'results',
-  '/changelog': 'changelog'
+  '/changelog': 'changelog',
+  '/teacher': 'teacherAuth',
+  '/teacher/dashboard': 'teacherDashboard'
 };
 
 const modeToPath = {
@@ -70,7 +82,9 @@ const modeToPath = {
   'squadSurvival': '/squad/survival',
   'squadResults': '/squad/results',
   'results': '/results',
-  'changelog': '/changelog'
+  'changelog': '/changelog',
+  'teacherAuth': '/teacher',
+  'teacherDashboard': '/teacher/dashboard'
 };
 
 function AppContent() {
@@ -80,6 +94,25 @@ function AppContent() {
   const [gameMode, setGameModeInternal] = useState(pathToMode[location.pathname] || 'nameInput');
   const [userName, setUserName] = useState('');
   const [currentQuestion, setCurrentQuestion] = useState({ a: 0, b: 0, type: 'multiplication' });
+
+  // Teacher Portal: student's optional selected teacher, and the live list of registered teachers
+  const [teacherId, setTeacherId] = useState('');
+  const [teacherList, setTeacherList] = useState([]);
+
+  // Teacher Portal: currently authenticated teacher (null when logged out)
+  const [currentTeacher, setCurrentTeacher] = useState(null);
+
+  // Teacher Portal: auth screen local state
+  const [teacherAuthMode, setTeacherAuthMode] = useState('login'); // 'login' or 'signup'
+  const [teacherEmail, setTeacherEmail] = useState('');
+  const [teacherPassword, setTeacherPassword] = useState('');
+  const [teacherDisplayNameInput, setTeacherDisplayNameInput] = useState('');
+  const [teacherAuthError, setTeacherAuthError] = useState('');
+  const [teacherAuthLoading, setTeacherAuthLoading] = useState(false);
+
+  // Teacher Portal: dashboard state
+  const [teacherReports, setTeacherReports] = useState([]);
+  const [teacherReportsLoading, setTeacherReportsLoading] = useState(false);
 
   // Custom setGameMode that also updates the URL
   const setGameMode = useCallback((mode) => {
@@ -98,9 +131,100 @@ function AppContent() {
     }
   }, [location.pathname, gameMode]);
 
+  // Teacher Portal: live list of registered teachers, for the student "select your teacher" dropdown
+  useEffect(() => {
+    const unsubscribe = subscribeToTeachers((teachers) => {
+      const sorted = [...teachers].sort((a, b) =>
+        (a.displayName || '').localeCompare(b.displayName || '')
+      );
+      setTeacherList(sorted);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Teacher Portal: track the currently authenticated teacher (null when logged out).
+  // onAuthStateChanged can fire more than once for the same session (e.g. an initial
+  // cached emission followed by a confirmed one) - only replace the object reference
+  // when the actual identity changes, so effects keyed on currentTeacher don't re-fire
+  // spuriously and cascade into a render loop.
+  //
+  // Right after signup, the very first emission for the new user can carry a blank
+  // displayName - createUserWithEmailAndPassword() fires this listener before the
+  // subsequent updateProfile() call (in signUpTeacher) has attached the name, so the
+  // cached auth user object hasn't caught up yet. Falling back to the previous
+  // non-blank displayName for the same uid avoids a "Teacher" flash while that settles,
+  // without needing to guess which order the two async calls resolve in.
+  useEffect(() => {
+    const unsubscribe = subscribeToAuthState((user) => {
+      setCurrentTeacher(prev => {
+        if (!user) {
+          return prev === null ? prev : null;
+        }
+        const displayName = user.displayName || (prev && prev.uid === user.uid ? prev.displayName : user.displayName);
+        if (prev && prev.uid === user.uid && prev.email === user.email && prev.displayName === displayName) {
+          return prev;
+        }
+        return { uid: user.uid, email: user.email, displayName };
+      });
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Teacher Portal: if already logged in (e.g. page refresh on /teacher), skip straight
+  // to the dashboard. This is intentionally one-directional - logging out navigates to
+  // 'nameInput' explicitly in handleTeacherLogout, rather than this effect trying to
+  // detect currentTeacher becoming null and race against that explicit navigation.
+  //
+  // Deliberately calls navigate() directly here, NOT setGameMode(). setGameMode writes
+  // gameMode state AND the URL in the same call; doing that from an effect races against
+  // the URL-sync effect above, which can see the URL momentarily still pointing at
+  // 'teacherAuth' and set gameMode back - which then re-triggers this effect, which sets
+  // gameMode forward again, and so on (a rapid teacherAuth/teacherDashboard flicker loop).
+  // Calling navigate() alone makes the URL-sync effect the single writer of gameMode for
+  // this transition, so there's no second writer left to race against.
+  useEffect(() => {
+    if (gameMode === 'teacherAuth' && currentTeacher) {
+      navigate('/teacher/dashboard');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameMode, currentTeacher?.uid, navigate]);
+
+  // Teacher Portal: load the last 30 days of usage reports whenever the dashboard is opened
+  useEffect(() => {
+    if (gameMode !== 'teacherDashboard' || !currentTeacher) {
+      return;
+    }
+    let cancelled = false;
+    setTeacherReportsLoading(true);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    fetchUsageEventsForTeacher(currentTeacher.uid, thirtyDaysAgo).then((events) => {
+      if (cancelled) return;
+      setTeacherReports(buildAvailableReports(events, currentTeacher.displayName || 'Teacher'));
+      setTeacherReportsLoading(false);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameMode, currentTeacher?.uid]);
+
   // App version and changelog
-  const APP_VERSION = 'v3.4.0';
+  const APP_VERSION = 'v4.0.0';
   const CHANGELOG = [
+    {
+      version: 'v4.0.0',
+      date: '07-14-2026',
+      features: [
+        'New Teacher Portal: teachers create a free account to see how their students are using the app',
+        'Students can optionally pick their teacher from a dropdown when entering their name',
+        'Every solo and squad game (Training, Monster Race, Boss Battle, Detective, Two-Digit, Division, Squad Battle, Squad Survival) is automatically logged to the teacher\'s dashboard',
+        'Teacher dashboard shows a rolling 30 days of usage, with a downloadable CSV report for each day',
+        'CSV reports include session duration, modes attempted, and best Monster Race / Boss Battle success rates per student',
+        'Usage is captured on natural game completion, early exit, or when a student switches away from the tab mid-game',
+        'New Firestore security rules scope each teacher\'s usage data so only that teacher can read it',
+        'Fixed a routing bug that could cause the teacher login and dashboard screens to flicker rapidly back and forth after signing in',
+        'Fixed the teacher\'s name briefly showing as generic "Teacher" instead of their real name right after creating an account',
+        'Teacher logout now returns to the student home screen instead of the main menu'
+      ]
+    },
     {
       version: 'v3.4.0',
       date: '01-27-2026',
@@ -260,6 +384,12 @@ function AppContent() {
   const [isJoining, setIsJoining] = useState(false);
   const [gameStartTime, setGameStartTime] = useState(null);
   const questionTimeoutRef = useRef(null);
+
+  // Teacher Portal: tracks the currently active play attempt so its duration/score
+  // can be logged to usageEvents on completion, early exit, or tab backgrounding
+  const sessionStartTimeRef = useRef(null);
+  const sessionModeRef = useRef(null);
+  const sessionLoggedRef = useRef(true); // true = nothing pending to log
 
   // Squad Battle states
   const [isSquadBattle, setIsSquadBattle] = useState(false);
@@ -880,108 +1010,152 @@ function AppContent() {
       return Math.floor(Math.random() * 13); // 0-12
     };
 
-    const clueTypes = ['product', 'missingFactor', 'factorRange', 'factorProperty', 'divisionPrep'];
-    const selectedType = clueTypes[Math.floor(Math.random() * clueTypes.length)];
+    // For clue types with a "given" number, that number must be non-zero.
+    // Otherwise the product is always 0 no matter what the hidden factor
+    // is, and the clue becomes mathematically unanswerable (e.g. "one
+    // factor is odd, the other is 0, the product is 0 - what's the odd
+    // factor?" has infinitely many valid answers). The hidden/unknown
+    // factor can still legitimately be 0.
+    const getRandomFactorNonZero = () => {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const array = new Uint32Array(1);
+        window.crypto.getRandomValues(array);
+        return 1 + (array[0] % 12); // 1-12
+      }
+      return 1 + Math.floor(Math.random() * 12); // 1-12
+    };
 
+    const clueTypes = ['product', 'missingFactor', 'factorRange', 'factorProperty', 'divisionPrep'];
+
+    let selectedType = '';
     let clue = '';
     let acceptedAnswers = [];
     let prefilledFactor = null;
     let prefilledPosition = null;
 
-    if (selectedType === 'product') {
-      // Generate a product dynamically instead of from a fixed list
-      // Use two random factors to create more variety
-      const factor1 = getRandomFactor();
-      const factor2 = getRandomFactor();
-      const product = factor1 * factor2;
+    // Try up to maxAttempts times to produce a clue that hasn't already
+    // appeared this session, so the same question doesn't repeat.
+    const maxAttempts = 30;
+    let attempts = 0;
 
-      // Find all factor pairs for this product (within 0-12 range)
+    do {
+      attempts++;
+      selectedType = clueTypes[Math.floor(Math.random() * clueTypes.length)];
+      clue = '';
       acceptedAnswers = [];
-      for (let i = 0; i <= 12; i++) {
-        for (let j = i; j <= 12; j++) {
-          if (i * j === product) {
-            acceptedAnswers.push([i, j]);
+      prefilledFactor = null;
+      prefilledPosition = null;
+
+      if (selectedType === 'product') {
+        // Generate a product dynamically instead of from a fixed list
+        // Use two random factors to create more variety
+        const factor1 = getRandomFactor();
+        const factor2 = getRandomFactor();
+        const product = factor1 * factor2;
+
+        // Find all factor pairs for this product (within 0-12 range)
+        for (let i = 0; i <= 12; i++) {
+          for (let j = i; j <= 12; j++) {
+            if (i * j === product) {
+              acceptedAnswers.push([i, j]);
+            }
           }
         }
-      }
 
-      // If product is 0, make the clue clearer
-      if (product === 0) {
-        clue = `My product is ${product}. What two numbers can you multiply to get ${product}? (Hint: one must be 0)`;
-      } else {
-        clue = `My product is ${product}. What two numbers can you multiply to get ${product}?`;
-      }
-
-    } else if (selectedType === 'missingFactor') {
-      const factor1 = getRandomFactor();
-      const factor2 = getRandomFactor();
-      const product = factor1 * factor2;
-
-      clue = `I multiplied ${factor1} by another number and got ${product}. What was the other number?`;
-      acceptedAnswers = [[factor1, factor2]]; // Only one correct answer
-
-    } else if (selectedType === 'factorRange') {
-      // Both factors between certain ranges with more variety
-      const minRange = Math.floor(Math.random() * 9); // 0-8
-      const maxRange = Math.min(12, minRange + Math.floor(Math.random() * 5) + 2); // Range of 2-6 numbers
-
-      const validPairs = [];
-      for (let i = minRange; i <= maxRange && i <= 12; i++) {
-        for (let j = i; j <= maxRange && j <= 12; j++) {
-          if (i * j <= 144) {
-            validPairs.push([i, j, i * j]);
-          }
+        // If product is 0, make the clue clearer
+        if (product === 0) {
+          clue = `My product is ${product}. What two numbers can you multiply to get ${product}? (Hint: one must be 0)`;
+        } else {
+          clue = `My product is ${product}. What two numbers can you multiply to get ${product}?`;
         }
-      }
 
-      if (validPairs.length > 0) {
-        const selected = validPairs[Math.floor(Math.random() * validPairs.length)];
-        clue = `Both my factors are between ${minRange} and ${maxRange}, and my product is ${selected[2]}. What are my factors?`;
-        acceptedAnswers = [[selected[0], selected[1]]];
-      } else {
-        // Fallback to simpler clue
-        return generateDetectiveClue();
-      }
+      } else if (selectedType === 'missingFactor') {
+        // The given factor must be non-zero so "the other number" has a
+        // single correct answer.
+        const factor1 = getRandomFactorNonZero();
+        const factor2 = getRandomFactor();
+        const product = factor1 * factor2;
 
-    } else if (selectedType === 'factorProperty') {
-      const isEvenClue = Math.random() > 0.5;
-      const knownFactor = getRandomFactor();
+        clue = `I multiplied ${factor1} by another number and got ${product}. What was the other number?`;
+        acceptedAnswers = [[factor1, factor2]]; // Only one correct answer
 
-      let unknownFactor;
-      if (isEvenClue) {
-        // Unknown factor is even
-        const evenFactors = [0, 2, 4, 6, 8, 10, 12];
-        unknownFactor = evenFactors[Math.floor(Math.random() * evenFactors.length)];
-      } else {
-        // Unknown factor is odd
-        const oddFactors = [1, 3, 5, 7, 9, 11];
-        unknownFactor = oddFactors[Math.floor(Math.random() * oddFactors.length)];
-      }
-
-      const product = knownFactor * unknownFactor;
-      clue = `One factor is ${isEvenClue ? 'even' : 'odd'}, the other is ${knownFactor}, and the product is ${product}. What's the ${isEvenClue ? 'even' : 'odd'} factor?`;
-      acceptedAnswers = [[Math.min(knownFactor, unknownFactor), Math.max(knownFactor, unknownFactor)]];
-
-    } else if (selectedType === 'divisionPrep') {
-      // Division prep: give one factor and the product, ask for the other factor
-      const factor1 = getRandomFactor();
-      const factor2 = getRandomFactor();
-      const product = factor1 * factor2;
-
-      // Randomly choose which factor to give (position 1 or 2)
-      const giveFirstFactor = Math.random() > 0.5;
-
-      if (giveFirstFactor) {
+        // The clue states factor1 explicitly, so pre-fill it in the first box.
         prefilledFactor = factor1;
         prefilledPosition = 1;
-        clue = `My first number is ${factor1} and my product is ${product}. What's my second number?`;
-        acceptedAnswers = [[factor1, factor2]];
-      } else {
-        prefilledFactor = factor2;
-        prefilledPosition = 2;
-        clue = `My second number is ${factor2} and my product is ${product}. What's my first number?`;
-        acceptedAnswers = [[factor1, factor2]];
+
+      } else if (selectedType === 'factorRange') {
+        // Both factors between certain ranges with more variety
+        const minRange = Math.floor(Math.random() * 9); // 0-8
+        const maxRange = Math.min(12, minRange + Math.floor(Math.random() * 5) + 2); // Range of 2-6 numbers
+
+        const validPairs = [];
+        for (let i = minRange; i <= maxRange && i <= 12; i++) {
+          for (let j = i; j <= maxRange && j <= 12; j++) {
+            if (i * j <= 144) {
+              validPairs.push([i, j, i * j]);
+            }
+          }
+        }
+
+        if (validPairs.length > 0) {
+          const selected = validPairs[Math.floor(Math.random() * validPairs.length)];
+          clue = `Both my factors are between ${minRange} and ${maxRange}, and my product is ${selected[2]}. What are my factors?`;
+          acceptedAnswers = [[selected[0], selected[1]]];
+        }
+        // If no valid pairs (shouldn't happen since both factors max at 12
+        // and 12*12=144), clue stays '' and the loop below will retry.
+
+      } else if (selectedType === 'factorProperty') {
+        const isEvenClue = Math.random() > 0.5;
+        // The known factor must be non-zero (see getRandomFactorNonZero comment above).
+        const knownFactor = getRandomFactorNonZero();
+
+        let unknownFactor;
+        if (isEvenClue) {
+          // Unknown factor is even
+          const evenFactors = [0, 2, 4, 6, 8, 10, 12];
+          unknownFactor = evenFactors[Math.floor(Math.random() * evenFactors.length)];
+        } else {
+          // Unknown factor is odd
+          const oddFactors = [1, 3, 5, 7, 9, 11];
+          unknownFactor = oddFactors[Math.floor(Math.random() * oddFactors.length)];
+        }
+
+        const product = knownFactor * unknownFactor;
+        clue = `One factor is ${isEvenClue ? 'even' : 'odd'}, the other is ${knownFactor}, and the product is ${product}. What's the ${isEvenClue ? 'even' : 'odd'} factor?`;
+        acceptedAnswers = [[Math.min(knownFactor, unknownFactor), Math.max(knownFactor, unknownFactor)]];
+
+        // The clue states the known factor explicitly, so pre-fill it.
+        // Randomize which box holds it for variety.
+        prefilledFactor = knownFactor;
+        prefilledPosition = Math.random() > 0.5 ? 1 : 2;
+
+      } else if (selectedType === 'divisionPrep') {
+        // Division prep: give one factor and the product, ask for the other factor.
+        // The given factor must be non-zero so "my other number" has a single answer.
+        const givenFactor = getRandomFactorNonZero();
+        const otherFactor = getRandomFactor();
+        const product = givenFactor * otherFactor;
+
+        // Randomly choose which position the given factor occupies
+        const giveFirstFactor = Math.random() > 0.5;
+
+        if (giveFirstFactor) {
+          prefilledFactor = givenFactor;
+          prefilledPosition = 1;
+          clue = `My first number is ${givenFactor} and my product is ${product}. What's my second number?`;
+          acceptedAnswers = [[givenFactor, otherFactor]];
+        } else {
+          prefilledFactor = givenFactor;
+          prefilledPosition = 2;
+          clue = `My second number is ${givenFactor} and my product is ${product}. What's my first number?`;
+          acceptedAnswers = [[otherFactor, givenFactor]];
+        }
       }
+    } while ((!clue || usedQuestions.has(clue)) && attempts < maxAttempts);
+
+    if (clue) {
+      setUsedQuestions(prev => new Set([...prev, clue]));
     }
 
     setDetectiveClue({ type: selectedType, clue, acceptedAnswers, prefilledFactor, prefilledPosition });
@@ -1198,6 +1372,54 @@ function AppContent() {
     }
   };
 
+  // Teacher Portal: call at the start of any loggable mode (solo or squad)
+  const beginUsageTracking = useCallback((mode) => {
+    sessionStartTimeRef.current = Date.now();
+    sessionModeRef.current = mode;
+    sessionLoggedRef.current = false;
+  }, []);
+
+  // Teacher Portal: call on natural completion, early exit, or tab backgrounding.
+  // Safe to call repeatedly - only logs once per beginUsageTracking() call.
+  const flushUsageTracking = useCallback((finalScore, flushReason) => {
+    if (sessionLoggedRef.current || !sessionStartTimeRef.current) {
+      return;
+    }
+    sessionLoggedRef.current = true;
+
+    const startedAt = sessionStartTimeRef.current;
+    const endedAt = Date.now();
+    const durationSeconds = Math.max(0, Math.round((endedAt - startedAt) / 1000));
+
+    if (!userName || !userName.trim()) {
+      return; // no student name to attribute this attempt to
+    }
+
+    logUsageEvent({
+      teacherId: teacherId || null,
+      studentName: userName.trim(),
+      gameMode: sessionModeRef.current,
+      score: finalScore || { correct: 0, total: 0 },
+      startedAt,
+      endedAt,
+      durationSeconds,
+      flushReason
+    });
+  }, [userName, teacherId]);
+
+  // Teacher Portal: best-effort flush when the tab is backgrounded/closed mid-game.
+  // This won't catch a hard OS-level kill at the exact wrong instant - an accepted gap
+  // given there's no server-side heartbeat (no Cloud Functions in this design).
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushUsageTracking(score, 'visibilitychange');
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [score, flushUsageTracking]);
+
   const startUnlimited = () => {
     initializeAudio(); // Initialize audio on game start
     playSound('click');
@@ -1207,6 +1429,7 @@ function AppContent() {
     setScore({ correct: 0, total: 0 });
     setUsedQuestions(new Set()); // Clear used questions for new session
     setGameActive(true);
+    beginUsageTracking('unlimited');
     generateQuestion();
     startBackgroundMusic();
   };
@@ -1226,6 +1449,9 @@ function AppContent() {
     // Start countdown, then actual game
     startCountdown(() => {
       setGameActive(true);
+      if (!isMultiplayer) {
+        beginUsageTracking('timed');
+      }
       generateQuestion();
       if (!isMultiplayer) {
         startBackgroundMusic();
@@ -1248,6 +1474,9 @@ function AppContent() {
     // Start countdown, then actual game
     startCountdown(() => {
       setGameActive(true);
+      if (!isMultiplayer) {
+        beginUsageTracking('advanced');
+      }
       generateQuestion();
       if (!isMultiplayer) {
         startBackgroundMusic();
@@ -1265,6 +1494,7 @@ function AppContent() {
     setDetectiveQuestionCount(1); // Start with question 1
     setUsedQuestions(new Set()); // Clear used questions for new session
     setGameActive(true);
+    beginUsageTracking('detective');
     generateDetectiveClue();
     startBackgroundMusic();
   };
@@ -1279,6 +1509,7 @@ function AppContent() {
     setTwoDigitQuestionCount(1); // Start with question 1
     setUsedQuestions(new Set()); // Clear used questions for new session
     setGameActive(true);
+    beginUsageTracking('twoDigit');
     generateTwoDigitQuestion();
     startBackgroundMusic();
   };
@@ -1292,6 +1523,7 @@ function AppContent() {
     setScore({ correct: 0, total: 0 });
     setUsedQuestions(new Set());
     setGameActive(true);
+    beginUsageTracking('division');
     generateDivisionQuestion();
     startBackgroundMusic();
   };
@@ -1405,6 +1637,12 @@ function AppContent() {
         // Don't auto-advance on wrong answer - user chooses
       }
     }, 150);
+  };
+
+  const handleTwoDigitKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      submitTwoDigitAnswer();
+    }
   };
 
   const moveToNextTwoDigitQuestion = () => {
@@ -1717,7 +1955,10 @@ function AppContent() {
     }
     
     setGameActive(false);
-    
+
+    // Teacher Portal: log this completed attempt (no-op if no tracking was started, e.g. multiplayer)
+    flushUsageTracking(score, 'completed');
+
     // Track game completion
     const percentage = score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0;
     trackEvent('game_completed', 'Game', gameMode, percentage);
@@ -1746,7 +1987,7 @@ function AppContent() {
     } else {
       setGameMode('results');
     }
-  }, [gameMode, score.total, score.correct, stopBackgroundMusic, isMultiplayer]);
+  }, [gameMode, score, stopBackgroundMusic, isMultiplayer, flushUsageTracking]);
 
   useEffect(() => {
     let timer;
@@ -1786,6 +2027,7 @@ function AppContent() {
         timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       } else if (timeLeft === 0 && gameActive) {
         setGameActive(false);
+        flushUsageTracking(score, 'completed');
         // Results will be shown by the component when timeLeft === 0
       }
     } else if (!isMultiplayer) {
@@ -1803,7 +2045,7 @@ function AppContent() {
         clearInterval(timer);
       }
     };
-  }, [gameMode, timeLeft, gameActive, feedback.show, endGame, isMultiplayer, userRole, sessionData]);
+  }, [gameMode, timeLeft, gameActive, feedback.show, endGame, isMultiplayer, userRole, sessionData, score, flushUsageTracking]);
 
   // Cleanup background music on unmount
   useEffect(() => {
@@ -1835,22 +2077,24 @@ function AppContent() {
       // so we check timeLeft !== 0 to prevent restart
       if (timeLeft !== 0) {
         setGameActive(true);
+        beginUsageTracking('squadBattle');
         const timeLimit = squadData?.battleType === 'quickClash' ? 180 : 180;
         setTimeLeft(timeLimit);
         generateQuestion();
       }
     }
-  }, [gameMode, gameActive, squadData?.isStarted, squadData?.battleType, generateQuestion, timeLeft]);
+  }, [gameMode, gameActive, squadData?.isStarted, squadData?.battleType, generateQuestion, timeLeft, beginUsageTracking]);
 
   // Auto-start squad survival when entering survival mode
   useEffect(() => {
     if (gameMode === 'squadSurvival' && !gameActive && squadData?.isStarted) {
       setGameActive(true);
+      beginUsageTracking('squadSurvival');
       setPlayerLives(3); // Reset lives
       setIsEliminated(false); // Reset elimination status
       generateQuestion();
     }
-  }, [gameMode, gameActive, squadData?.isStarted, generateQuestion]);
+  }, [gameMode, gameActive, squadData?.isStarted, generateQuestion, beginUsageTracking]);
 
   // Play end sound when survival game is over
   useEffect(() => {
@@ -1859,9 +2103,10 @@ function AppContent() {
       const gameOver = activePlayers.length <= 1;
       if (gameOver && squadData.isStarted) {
         // Game over - no sound needed (end music plays via playEndMusic)
+        flushUsageTracking(score, 'completed');
       }
     }
-  }, [gameMode, squadData?.players, squadData?.isStarted]);
+  }, [gameMode, squadData?.players, squadData?.isStarted, score, flushUsageTracking]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
@@ -1872,13 +2117,16 @@ function AppContent() {
   const backToMenu = async () => {
     playSound('click');
     stopBackgroundMusic();
-    
+
+    // Teacher Portal: log whatever was played so far as an early exit (no-op if nothing pending)
+    flushUsageTracking(score, 'early_exit');
+
     // Clear any existing question timeout
     if (questionTimeoutRef.current) {
       clearTimeout(questionTimeoutRef.current);
       questionTimeoutRef.current = null;
     }
-    
+
     // Complete multiplayer cleanup
     await cleanupMultiplayerState();
     
@@ -1940,17 +2188,38 @@ function AppContent() {
               autoFocus
               maxLength={30}
             />
+            <div className="teacher-select-container">
+              <label htmlFor="teacher-select">Who's your teacher? (optional)</label>
+              <select
+                id="teacher-select"
+                value={teacherId}
+                onChange={(e) => setTeacherId(e.target.value)}
+                className="teacher-select"
+              >
+                <option value="">No teacher / just practicing</option>
+                {teacherList.map((teacher) => (
+                  <option key={teacher.id} value={teacher.id}>
+                    {teacher.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
             {nameError && (
               <div className="name-error">
                 ❌ {nameError}
               </div>
             )}
-            <button 
-              onClick={handleNameSubmit} 
+            <button
+              onClick={handleNameSubmit}
               className="submit-button"
               disabled={!userName.trim()}
             >
               🚀 Enter the monster kingdom!
+            </button>
+          </div>
+          <div className="version-footer">
+            <button className="version-link" onClick={() => setGameMode('teacherAuth')}>
+              👩‍🏫 Teacher Portal
             </button>
           </div>
         </div>
@@ -2065,6 +2334,200 @@ function AppContent() {
             <span className="copyright-text">
               Copyright {new Date().getFullYear()}, Eric Ellis Design
             </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Teacher Portal: Authentication (login / create account)
+  // (an effect above redirects to teacherDashboard if already logged in)
+  if (gameMode === 'teacherAuth') {
+
+    const handleTeacherAuthSubmit = async () => {
+      setTeacherAuthError('');
+
+      if (!teacherEmail.trim() || !teacherPassword) {
+        setTeacherAuthError('Please enter your email and password.');
+        return;
+      }
+      if (teacherAuthMode === 'signup' && !teacherDisplayNameInput.trim()) {
+        setTeacherAuthError('Please enter your name.');
+        return;
+      }
+
+      setTeacherAuthLoading(true);
+      const result = teacherAuthMode === 'signup'
+        ? await signUpTeacher(teacherEmail.trim(), teacherPassword, teacherDisplayNameInput.trim())
+        : await logInTeacher(teacherEmail.trim(), teacherPassword);
+      setTeacherAuthLoading(false);
+
+      // On success, the auth-state effect above will redirect to teacherDashboard
+      // once currentTeacher updates - no need to navigate here too.
+      if (!result.success) {
+        setTeacherAuthError(result.error || 'Something went wrong. Please try again.');
+        return;
+      }
+
+      // On signup, seed currentTeacher immediately from the name just typed in rather
+      // than waiting on the auth-state listener: the first onAuthStateChanged emission
+      // for a brand-new user fires before signUpTeacher's updateProfile() call attaches
+      // the display name, so relying on it alone briefly shows the "Teacher" fallback.
+      // We already know the display name locally, so there's no need to wait.
+      if (teacherAuthMode === 'signup') {
+        setCurrentTeacher({
+          uid: result.uid,
+          email: teacherEmail.trim(),
+          displayName: teacherDisplayNameInput.trim()
+        });
+      }
+    };
+
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+        <div className="menu-container">
+          <h1>Teacher Portal</h1>
+          <p>Log in to see your students' usage reports.</p>
+
+          <div className="teacher-auth-toggle">
+            <button
+              className={`teacher-auth-tab ${teacherAuthMode === 'login' ? 'active' : ''}`}
+              onClick={() => { setTeacherAuthMode('login'); setTeacherAuthError(''); }}
+            >
+              Log In
+            </button>
+            <button
+              className={`teacher-auth-tab ${teacherAuthMode === 'signup' ? 'active' : ''}`}
+              onClick={() => { setTeacherAuthMode('signup'); setTeacherAuthError(''); }}
+            >
+              Create Account
+            </button>
+          </div>
+
+          <div className="teacher-auth-form">
+            {teacherAuthMode === 'signup' && (
+              <input
+                type="text"
+                value={teacherDisplayNameInput}
+                onChange={(e) => setTeacherDisplayNameInput(e.target.value)}
+                className="name-input"
+                placeholder="Your name (e.g. Ms. Johnson)"
+                maxLength={50}
+              />
+            )}
+            <input
+              type="email"
+              value={teacherEmail}
+              onChange={(e) => setTeacherEmail(e.target.value)}
+              className="name-input"
+              placeholder="Email"
+              autoComplete="email"
+            />
+            <input
+              type="password"
+              value={teacherPassword}
+              onChange={(e) => setTeacherPassword(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleTeacherAuthSubmit()}
+              className="name-input"
+              placeholder="Password"
+              autoComplete={teacherAuthMode === 'signup' ? 'new-password' : 'current-password'}
+            />
+            {teacherAuthError && (
+              <div className="name-error">
+                ❌ {teacherAuthError}
+              </div>
+            )}
+            <button
+              onClick={handleTeacherAuthSubmit}
+              className="submit-button"
+              disabled={teacherAuthLoading}
+            >
+              {teacherAuthLoading ? 'Please wait...' : (teacherAuthMode === 'signup' ? '🚀 Create account' : '🚀 Log in')}
+            </button>
+            <button className="version-link" onClick={() => setGameMode('menu')}>
+              ← Back to menu
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Teacher Portal: Dashboard (rolling 30-day usage reports)
+  // (an effect above redirects to teacherAuth if logged out)
+  if (gameMode === 'teacherDashboard') {
+
+    // Guard against direct/bookmarked access to this URL while logged out.
+    // A plain conditional render here (not an effect) avoids any risk of racing
+    // against other navigation happening at the same time.
+    if (!currentTeacher) {
+      return (
+        <div className="App">
+          <div className="menu-container">
+            <p>You've been logged out.</p>
+            <button className="submit-button" onClick={() => setGameMode('teacherAuth')}>
+              Log in again
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    const handleDownloadReport = (report) => {
+      const blob = new Blob([report.csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = report.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+
+    const handleTeacherLogout = async () => {
+      await logOutTeacher();
+      setGameMode('nameInput');
+    };
+
+    return (
+      <div className="App">
+        <div className="floating-ghost">👻</div>
+        <div className="floating-skull">💀</div>
+        <div className="floating-robot">🤖</div>
+        <div className="floating-demon">👹</div>
+        <div className="menu-container">
+          <h1>{currentTeacher?.displayName || 'Teacher'}</h1>
+          <p>Your students' usage reports, updated live for the last 30 days.</p>
+
+          <div className="teacher-dashboard-list">
+            {teacherReportsLoading && (
+              <p>Loading reports...</p>
+            )}
+            {!teacherReportsLoading && teacherReports.length === 0 && (
+              <p>No usage yet. Reports will appear here once your students start playing.</p>
+            )}
+            {!teacherReportsLoading && teacherReports.map((report) => (
+              <div key={report.dayKey} className="teacher-report-row">
+                <span className="teacher-report-date">{report.displayDate}</span>
+                <button className="submit-button" onClick={() => handleDownloadReport(report)}>
+                  ⬇️ Download CSV
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="game-controls">
+            <button onClick={handleTeacherLogout} className="back-button">
+              Log Out
+            </button>
+            <button onClick={() => setGameMode('menu')} className="back-button">
+              ← Back to menu
+            </button>
           </div>
         </div>
       </div>
@@ -2531,6 +2994,9 @@ function AppContent() {
     };
 
     const handleLeaveSquadBattle = async () => {
+      // Teacher Portal: log whatever was played so far as an early exit (no-op if nothing pending)
+      flushUsageTracking(score, 'early_exit');
+
       if (squadUnsubscribe) {
         squadUnsubscribe();
         setSquadUnsubscribe(null);
@@ -2633,27 +3099,29 @@ function AppContent() {
                     {currentQuestion.a} × {currentQuestion.b} = ?
                   </div>
                 )}
-                {currentQuestion.type !== 'division' && (
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
-                    onKeyPress={handleSquadKeyPress}
-                    className="answer-input"
-                    placeholder="Your answer"
-                    autoFocus
-                    disabled={!gameActive || timeLeft === 0}
-                  />
-                )}
-                <button
-                  onClick={handleSquadSubmitAnswer}
-                  disabled={!userAnswer.trim() || !gameActive || timeLeft === 0}
-                  className="submit-button"
-                >
-                  ⚔️ Attack!
-                </button>
+                <div className="answer-row">
+                  {currentQuestion.type !== 'division' && (
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={userAnswer}
+                      onChange={(e) => setUserAnswer(e.target.value)}
+                      onKeyPress={handleSquadKeyPress}
+                      className="answer-input"
+                      placeholder="Your answer"
+                      autoFocus
+                      disabled={!gameActive || timeLeft === 0}
+                    />
+                  )}
+                  <button
+                    onClick={handleSquadSubmitAnswer}
+                    disabled={!userAnswer.trim() || !gameActive || timeLeft === 0}
+                    className="submit-button"
+                  >
+                    ⚔️ Attack!
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -2769,6 +3237,9 @@ function AppContent() {
     };
 
     const handleLeaveSurvival = async () => {
+      // Teacher Portal: log whatever was played so far as an early exit (no-op if nothing pending)
+      flushUsageTracking(score, 'early_exit');
+
       if (squadUnsubscribe) {
         squadUnsubscribe();
         setSquadUnsubscribe(null);
@@ -2871,27 +3342,29 @@ function AppContent() {
                     {currentQuestion.a} × {currentQuestion.b} = ?
                   </div>
                 )}
-                {currentQuestion.type !== 'division' && (
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
-                    onKeyPress={handleSurvivalKeyPress}
-                    className="answer-input"
-                    placeholder="Your answer"
-                    autoFocus
-                    disabled={isEliminated || gameOver}
-                  />
-                )}
-                <button
-                  onClick={handleSurvivalSubmitAnswer}
-                  disabled={!userAnswer.trim() || isEliminated || gameOver}
-                  className="submit-button"
-                >
-                  ⚔️ Attack!
-                </button>
+                <div className="answer-row">
+                  {currentQuestion.type !== 'division' && (
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={userAnswer}
+                      onChange={(e) => setUserAnswer(e.target.value)}
+                      onKeyPress={handleSurvivalKeyPress}
+                      className="answer-input"
+                      placeholder="Your answer"
+                      autoFocus
+                      disabled={isEliminated || gameOver}
+                    />
+                  )}
+                  <button
+                    onClick={handleSurvivalSubmitAnswer}
+                    disabled={!userAnswer.trim() || isEliminated || gameOver}
+                    className="submit-button"
+                  >
+                    ⚔️ Attack!
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -3828,6 +4301,7 @@ function AppContent() {
                         setDetectiveInput(prev => ({ ...prev, factor1: e.target.value }));
                       }
                     }}
+                    onKeyPress={(e) => e.key === 'Enter' && submitDetectiveAnswer()}
                     className={`detective-input ${detectiveClue.prefilledPosition === 1 ? 'prefilled' : ''}`}
                     placeholder="First number"
                     min="0"
@@ -3857,8 +4331,10 @@ function AppContent() {
                   onClick={submitDetectiveAnswer}
                   className="submit-button detective-submit"
                   disabled={
-                    detectiveClue.type === 'divisionPrep'
-                      ? (detectiveClue.prefilledPosition === 1 ? !detectiveInput.factor2 : !detectiveInput.factor1)
+                    detectiveClue.prefilledPosition === 1
+                      ? !detectiveInput.factor2
+                      : detectiveClue.prefilledPosition === 2
+                      ? !detectiveInput.factor1
                       : (!detectiveInput.factor1 || !detectiveInput.factor2)
                   }
                 >
@@ -3903,6 +4379,7 @@ function AppContent() {
                       className="carry-input"
                       value={twoDigitWork.carry2}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, carry2: e.target.value.replace(/\D/g, '') }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                       placeholder=" "
                     />
                     <input
@@ -3912,6 +4389,7 @@ function AppContent() {
                       className="carry-input"
                       value={twoDigitWork.carry1}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, carry1: e.target.value.replace(/\D/g, '') }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                       placeholder=" "
                     />
                   </div>
@@ -3947,6 +4425,7 @@ function AppContent() {
                       className="carry-input small"
                       value={twoDigitWork.addCarry3}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, addCarry3: e.target.value.replace(/\D/g, '') }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                       placeholder=" "
                     />
                     <input
@@ -3956,6 +4435,7 @@ function AppContent() {
                       className="carry-input small"
                       value={twoDigitWork.addCarry2}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, addCarry2: e.target.value.replace(/\D/g, '') }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                       placeholder=" "
                     />
                     <input
@@ -3965,6 +4445,7 @@ function AppContent() {
                       className="carry-input small"
                       value={twoDigitWork.addCarry1}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, addCarry1: e.target.value.replace(/\D/g, '') }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                       placeholder=" "
                     />
                     <div className="carry-space"></div>
@@ -3980,6 +4461,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.row1.thousands}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row1: { ...prev.row1, thousands: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                     <input
                       type="text"
@@ -3988,6 +4470,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.row1.hundreds}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row1: { ...prev.row1, hundreds: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                     <input
                       type="text"
@@ -3996,6 +4479,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.row1.tens}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row1: { ...prev.row1, tens: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                     <input
                       type="text"
@@ -4004,6 +4488,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.row1.ones}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row1: { ...prev.row1, ones: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                   </div>
 
@@ -4017,6 +4502,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.row2.thousands}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row2: { ...prev.row2, thousands: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                     <input
                       type="text"
@@ -4025,6 +4511,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.row2.hundreds}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row2: { ...prev.row2, hundreds: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                     <input
                       type="text"
@@ -4033,6 +4520,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.row2.tens}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, row2: { ...prev.row2, tens: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                     <div className="digit-display placeholder-zero">0</div>
                   </div>
@@ -4050,6 +4538,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.sum.thousands}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, sum: { ...prev.sum, thousands: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                     <input
                       type="text"
@@ -4058,6 +4547,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.sum.hundreds}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, sum: { ...prev.sum, hundreds: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                     <input
                       type="text"
@@ -4066,6 +4556,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.sum.tens}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, sum: { ...prev.sum, tens: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                     <input
                       type="text"
@@ -4074,6 +4565,7 @@ function AppContent() {
                       className="digit-input"
                       value={twoDigitWork.sum.ones}
                       onChange={(e) => setTwoDigitWork(prev => ({ ...prev, sum: { ...prev.sum, ones: e.target.value.replace(/\D/g, '') } }))}
+                      onKeyPress={handleTwoDigitKeyPress}
                     />
                   </div>
                 </div>
@@ -4186,7 +4678,7 @@ function AppContent() {
             )}
 
             {!feedback.show && (
-              <>
+              <div className="answer-row">
                 {currentQuestion.type !== 'division' && (
                   <input
                     ref={answerInputRef}
@@ -4204,7 +4696,7 @@ function AppContent() {
                 <button onClick={submitAnswer} className="submit-button">
                   Attack Monster!
                 </button>
-              </>
+              </div>
             )}
           </div>
 
