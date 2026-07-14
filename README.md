@@ -1,8 +1,8 @@
 # 🎯 Multiply Monsters
 
-An engaging, gamified multiplication practice app designed for elementary school students. Features multiple game modes including single-player practice, multiplayer classroom battles, and detective-style problem solving.
+An engaging, gamified multiplication (and division) practice app designed for elementary school students. Features single-player practice, multiplayer classroom battles, detective-style problem solving, and a self-service teacher portal with usage reporting.
 
-![Version](https://img.shields.io/badge/version-3.0.1-blue)
+![Version](https://img.shields.io/badge/version-4.0.0-blue)
 ![React](https://img.shields.io/badge/React-19.1.1-61dafb)
 ![Firebase](https://img.shields.io/badge/Firebase-12.1.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -11,24 +11,36 @@ An engaging, gamified multiplication practice app designed for elementary school
 
 ### 🎮 Game Modes
 
-#### Single Player
-- **Unlimited Practice** - Practice at your own pace with instant feedback
-- **Timed Challenge** - Race against the clock (60 seconds)
-- **Advanced Mode** - One factor 1-9, the other 1-20 for extended learning
+#### Solo Adventures
+- **Training** - Unlimited practice at your own pace with instant feedback
+- **Monster Detective** - Solve multiplication mysteries with 5 different clue types
+- **Two-Digit Multiplication** - Step-by-step practice of the traditional vertical algorithm
+- **Division** - Long-division-style practice, the inverse of the multiplication facts
+
+#### Timed Challenges
+- **Monster Race** - 60-second sprint against the clock
+- **Boss Battle** - Ultimate challenge with an extended factor range
+- **Include Division toggle** - Mix division questions in at a 50/50 ratio
 
 #### 🕵️ Monster Detective Mode
-- Solve multiplication mysteries with 5 different clue types
 - Crypto-secure randomization for true variety
 - Expanded 0-12 factor range for zero property education
 - Manual review of incorrect answers with "Next Question" control
 - Dynamic product generation (169 possible combinations)
 
-#### 👥 Multiplayer Classroom Modes
-- **Monster Squad Showdown** - Student-led peer battles
-- **Quick Clash** - 3-minute speed battle with real-time leaderboards
+#### 👥 Classroom Multiplayer
+- **Battle Mode** - Teacher-led classroom sessions with real-time monitoring
+- **Squad Showdown** - Student-led peer battles (Quick Clash, Epic Duel, Survival)
 - **Survival Mode** - Last player standing elimination game
-- Real-time teacher monitoring and leaderboards
+- Division toggle supported across all multiplayer modes
 - Session-based gameplay with unique codes
+
+#### 👩‍🏫 Teacher Portal
+- Self-service teacher accounts (email/password via Firebase Auth)
+- Students optionally link themselves to a teacher at name entry
+- Every solo/squad session is automatically logged (Training, Monster Race, Boss Battle, Detective, Two-Digit, Division, Squad Battle, Squad Survival)
+- Rolling 30-day usage dashboard with per-day CSV export
+- Firestore security rules scope data so a teacher only sees their own students
 
 ### 🎨 User Experience
 - Clean, card-based design with Hanken Grotesk font
@@ -37,22 +49,21 @@ An engaging, gamified multiplication practice app designed for elementary school
 - Progressive Web App (PWA) support for offline play
 - Mobile-optimized interface
 
-## 🆕 What's New in v3.0.1
+## 🆕 What's New in v4.0.0
 
-### Detective Mode Improvements
-- **Enhanced Randomization** - Crypto-secure random generation using `crypto.getRandomValues`
-- **Zero Property Education** - Expanded range to 0-12 (previously 1-12)
-- **Dynamic Products** - 169 possible combinations (up from 11 fixed products)
-- **Smart Zero Logic** - When asking "0 × ? = 0", accepts ANY number 0-12 as correct
-- **Manual Dismiss** - Users control when to advance after wrong answers
-- **Learning Review** - "Next Question" button appears after incorrect answers
-- **Auto-advance** - Correct answers still advance automatically (1.5s)
+### Teacher Portal
+- **Teacher Accounts** - New "Teacher Portal" link on the main menu (`/teacher`) for creating an account or logging in
+- **Student Teacher Selection** - Optional "Who's your teacher?" dropdown at name entry; skippable with no change to existing behavior
+- **Automatic Usage Logging** - Every solo/squad mode logs a session on completion, early exit, or tab backgrounding
+- **Teacher Dashboard** (`/teacher/dashboard`) - Rolling 30-day usage view, one row per active day, with CSV export (student name, session duration, modes attempted, best success rates)
+- **Security** - New Firestore rules scope reads to a teacher's own students, enforced against their real Auth UID
 
 ### Bug Fixes
-- Fixed input validation to properly accept 0 as a valid factor
-- Fixed HTML input constraints (min changed from 1 to 0)
-- Fixed answer checking to handle zero multiplication edge cases
-- Improved feedback display for all answer types
+- Fixed a routing race causing the login/dashboard screens to flicker on sign-in
+- Fixed teacher display name briefly showing as generic "Teacher" right after signup
+- Teacher logout now returns to the student home screen instead of the main menu
+
+See [prod/v4.0.0/RELEASE_NOTES.md](./prod/v4.0.0/RELEASE_NOTES.md) for full details.
 
 ## 🚀 Getting Started
 
@@ -104,15 +115,17 @@ multiply-monsters/
 │   ├── manifest.json
 │   └── sounds/         # Audio files
 ├── src/
-│   ├── App.js          # Main application component
-│   ├── App.css         # Styling
-│   ├── firebase.js     # Firebase configuration
-│   └── multiplayerUtils.js  # Multiplayer logic
-├── prod/               # Production builds
-│   ├── v3.0.1/        # Latest release
-│   ├── v3.0.0/
+│   ├── App.js           # Main application component
+│   ├── App.css          # Styling
+│   ├── firebase.js      # Firebase configuration
+│   ├── multiplayerUtils.js  # Multiplayer logic
+│   ├── teacherUtils.js  # Teacher auth + Firestore functions
+│   └── reportUtils.js   # CSV/usage report aggregation
+├── prod/                # Production builds
+│   ├── v4.0.0/         # Latest release
+│   ├── v3.4.0/
 │   └── ...
-├── firestore.rules     # Firestore security rules
+├── firestore.rules      # Firestore security rules
 └── package.json
 ```
 
@@ -181,10 +194,10 @@ The production build in the `build` folder can be deployed to any static hosting
 
 ## 🗺️ Roadmap
 
+- [x] Division mode
+- [x] Student progress reports for teachers
 - [ ] More game modes (Speed Rounds, Pattern Recognition)
 - [ ] Leaderboard persistence across sessions
-- [ ] Student progress reports for teachers
-- [ ] Division mode
 - [ ] Customizable number ranges
 - [ ] Achievements and badges system
 - [ ] Parent dashboard
@@ -204,6 +217,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 See the in-app version history screen or [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.
 
 ### Recent Releases
+- **v4.0.0** (Jul 2026) - Teacher Portal: self-service accounts and a usage dashboard with CSV export
+- **v3.4.0** (Jan 2026) - Division Support: standalone Division mode plus a mix-in toggle for timed/multiplayer modes
+- **v3.3.1** (Jan 2026) - Fixed a critical timer bug causing screen flickering and audio overlap
+- **v3.3.0** (Nov 2025) - URL-based navigation with React Router
+- **v3.2.0** (Nov 2025) - Two-Digit Multiplication mode
 - **v3.0.1** (Nov 2025) - Detective Mode improvements with enhanced randomization
 - **v3.0.0** (Sep 2025) - Monster Squad Showdown multiplayer modes
 - **v2.1.2** (Sep 2025) - Smart name validation
@@ -231,7 +249,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For issues, questions, or suggestions:
 - Open an issue on [GitHub](https://github.com/fnkdumplin1/multiply-monsters/issues)
-- Check the [Teacher Guide](./prod/v3.0.1/BATTLE_MODE_TEACHER_GUIDE.md) for classroom usage
+- Check the [Teacher Guide](<./prod/v4.0.0/Multiplication Trainer - Battle Mode Teacher Guide.pdf>) for classroom usage
 
 ---
 
