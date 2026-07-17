@@ -2,7 +2,7 @@
 
 An engaging, gamified multiplication (and division) practice app designed for elementary school students. Features single-player practice, multiplayer classroom battles, detective-style problem solving, and a self-service teacher portal with usage reporting.
 
-![Version](https://img.shields.io/badge/version-4.0.0-blue)
+![Version](https://img.shields.io/badge/version-4.0.1-blue)
 ![React](https://img.shields.io/badge/React-19.1.1-61dafb)
 ![Firebase](https://img.shields.io/badge/Firebase-12.1.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -49,21 +49,19 @@ An engaging, gamified multiplication (and division) practice app designed for el
 - Progressive Web App (PWA) support for offline play
 - Mobile-optimized interface
 
-## 🆕 What's New in v4.0.0
-
-### Teacher Portal
-- **Teacher Accounts** - New "Teacher Portal" link on the main menu (`/teacher`) for creating an account or logging in
-- **Student Teacher Selection** - Optional "Who's your teacher?" dropdown at name entry; skippable with no change to existing behavior
-- **Automatic Usage Logging** - Every solo/squad mode logs a session on completion, early exit, or tab backgrounding
-- **Teacher Dashboard** (`/teacher/dashboard`) - Rolling 30-day usage view, one row per active day, with CSV export (student name, session duration, modes attempted, best success rates)
-- **Security** - New Firestore rules scope reads to a teacher's own students, enforced against their real Auth UID
+## 🆕 What's New in v4.0.1
 
 ### Bug Fixes
-- Fixed a routing race causing the login/dashboard screens to flicker on sign-in
-- Fixed teacher display name briefly showing as generic "Teacher" right after signup
-- Teacher logout now returns to the student home screen instead of the main menu
+- Fixed a performance bug where the answer input could briefly freeze while typing, caused by a new browser audio context being created (and never closed) on every sound effect
+- Fixed a timing bug where answering a question quickly could briefly flash the previous question again before the next one loaded
+- Fixed the Teacher Portal's Log In / Create Account control: now a centered toggle switch instead of a left-aligned pair of buttons with a stray gray background
 
-See [prod/v4.0.0/RELEASE_NOTES.md](./prod/v4.0.0/RELEASE_NOTES.md) for full details.
+### Polish
+- Added a Home link to the main menu so students and teachers can get back to the name-entry screen without being logged out
+- Replaced emoji icons on all buttons and links throughout the app with a consistent set of stroke-based icons
+- Added a floating Feedback button on the main menu linking to the public feedback board for bug reports and feature requests
+
+See [prod/v4.0.1/RELEASE_NOTES.md](./prod/v4.0.1/RELEASE_NOTES.md) for full details.
 
 ## 🚀 Getting Started
 
@@ -122,8 +120,8 @@ multiply-monsters/
 │   ├── teacherUtils.js  # Teacher auth + Firestore functions
 │   └── reportUtils.js   # CSV/usage report aggregation
 ├── prod/                # Production builds
-│   ├── v4.0.0/         # Latest release
-│   ├── v3.4.0/
+│   ├── v4.0.1/         # Latest release
+│   ├── v4.0.0/
 │   └── ...
 ├── firestore.rules      # Firestore security rules
 └── package.json
@@ -217,6 +215,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 See the in-app version history screen or [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.
 
 ### Recent Releases
+- **v4.0.1** (Jul 2026) - Bug fixes and polish: input-freeze fix, question-timing fix, Teacher Portal toggle redesign, stroke-icon pass, and a feedback button
 - **v4.0.0** (Jul 2026) - Teacher Portal: self-service accounts and a usage dashboard with CSV export
 - **v3.4.0** (Jan 2026) - Division Support: standalone Division mode plus a mix-in toggle for timed/multiplayer modes
 - **v3.3.1** (Jan 2026) - Fixed a critical timer bug causing screen flickering and audio overlap
@@ -249,7 +248,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For issues, questions, or suggestions:
 - Open an issue on [GitHub](https://github.com/fnkdumplin1/multiply-monsters/issues)
-- Check the [Teacher Guide](<./prod/v4.0.0/Multiplication Trainer - Battle Mode Teacher Guide.pdf>) for classroom usage
+- Check the [Teacher Guide](<./prod/v4.0.1/Multiplication Trainer - Battle Mode Teacher Guide.pdf>) for classroom usage
 
 ---
 

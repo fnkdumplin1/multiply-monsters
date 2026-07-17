@@ -1,3 +1,26 @@
+/* Iconic Pro stroke icons inside buttons/links - sized relative to the
+   surrounding text so they scale with each button's own font-size, and
+   colored via currentColor so they match the button's text color. */
+.btn-icon {
+  width: 1.3em;
+  height: 1.3em;
+  vertical-align: -0.25em;
+  margin-right: 0.35em;
+  flex-shrink: 0;
+}
+
+.btn-icon--standalone {
+  margin-right: 0;
+  vertical-align: -0.3em;
+}
+
+/* Multiplayer/squad mode-select buttons are larger and stack icon above
+   label, so their icons can afford to read bigger too. */
+.mode-button .btn-icon {
+  width: 1.7em;
+  height: 1.7em;
+}
+
 /* Design System Color Variables */
 :root {
   /* Primary Colors - Orange */
@@ -2394,11 +2417,13 @@ body:has(input:focus) .mode-button::before {
 
 .teacher-auth-toggle {
   display: flex;
+  width: fit-content;
   gap: 4px;
-  background: var(--gray-100);
-  border-radius: 10px;
+  background: transparent;
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
   padding: 4px;
-  margin: 10px 0;
+  margin: 10px auto;
 }
 
 .teacher-auth-tab {
@@ -2407,17 +2432,17 @@ body:has(input:focus) .mode-button::before {
   font-weight: var(--font-weight-medium);
   padding: 10px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
   background: transparent;
   color: var(--gray-600);
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .teacher-auth-tab.active {
-  background: var(--white);
-  color: var(--primary-500);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--primary-500);
+  color: var(--text-white);
 }
 
 .teacher-auth-form {
@@ -3509,6 +3534,7 @@ h5, h6 {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--text-secondary);
+  text-decoration: none;
   cursor: pointer;
   padding: 8px 12px;
   border-radius: 8px;
@@ -3528,6 +3554,49 @@ h5, h6 {
   color: var(--text-secondary);
   padding: 8px 12px;
   border-radius: 8px;
+}
+
+/* Floating feedback button - menu screen only */
+.feedback-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-500);
+  color: var(--text-white);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feedback-fab:hover {
+  background: var(--primary-600);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25), 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.feedback-fab-icon {
+  width: 28px;
+  height: 28px;
+}
+
+@media (max-width: 480px) {
+  .feedback-fab {
+    width: 52px;
+    height: 52px;
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .feedback-fab-icon {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 /* Changelog Styling */

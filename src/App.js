@@ -28,6 +28,31 @@ import {
 } from './teacherUtils';
 import { buildAvailableReports } from './reportUtils';
 
+// Iconic Pro stroke icons for interactive elements (buttons/links). Background
+// decoration and the large /menu mode-card icons intentionally stay emoji-based.
+import { ReactComponent as HomeIcon } from './icons/home.svg';
+import { ReactComponent as ArrowLeftIcon } from './icons/arrow-left.svg';
+import { ReactComponent as ArrowRightIcon } from './icons/arrow-right.svg';
+import { ReactComponent as RocketIcon } from './icons/rocket.svg';
+import { ReactComponent as TeacherIcon } from './icons/teacher.svg';
+import { ReactComponent as DownloadIcon } from './icons/download.svg';
+import { ReactComponent as PlusCircleIcon } from './icons/plus-circle.svg';
+import { ReactComponent as BackpackIcon } from './icons/backpack.svg';
+import { ReactComponent as BoltIcon } from './icons/bolt.svg';
+import { ReactComponent as ShieldIcon } from './icons/shield.svg';
+import { ReactComponent as SkullIcon } from './icons/skull.svg';
+import { ReactComponent as CheckIcon } from './icons/check.svg';
+import { ReactComponent as HourglassIcon } from './icons/hourglass.svg';
+import { ReactComponent as TrophyIcon } from './icons/trophy.svg';
+import { ReactComponent as RefreshIcon } from './icons/refresh.svg';
+import { ReactComponent as TrashIcon } from './icons/trash.svg';
+import { ReactComponent as CloseIcon } from './icons/close.svg';
+import { ReactComponent as QuestionMarkCircleIcon } from './icons/question-mark-circle.svg';
+import { ReactComponent as SearchIcon } from './icons/search.svg';
+import { ReactComponent as StopIcon } from './icons/stop.svg';
+import { ReactComponent as ChartIcon } from './icons/chart.svg';
+import { ReactComponent as MessageIcon } from './icons/message.svg';
+
 // Map URL paths to game modes
 const pathToMode = {
   '/': 'nameInput',
@@ -207,8 +232,20 @@ function AppContent() {
   }, [gameMode, currentTeacher?.uid]);
 
   // App version and changelog
-  const APP_VERSION = 'v4.0.0';
+  const APP_VERSION = 'v4.0.1';
   const CHANGELOG = [
+    {
+      version: 'v4.0.1',
+      date: '07-17-2026',
+      features: [
+        'Added a Home link to the main menu so students and teachers can get back to the name-entry screen without being logged out',
+        'Fixed a performance bug where the answer input could briefly freeze while typing, caused by a new browser sound-effect context being created (and never closed) on every answer submission',
+        'Fixed a timing bug where answering a question quickly could briefly flash the previous question again before the next one loaded',
+        'Replaced emoji icons on all buttons and links with a consistent set of stroke-based icons',
+        'Redesigned the Teacher Portal\'s Log In / Create Account control as a centered toggle switch, removing a stray gray background box',
+        'Added a floating Feedback button on the main menu linking to the public feedback board for bug reports and feature requests'
+      ]
+    },
     {
       version: 'v4.0.0',
       date: '07-14-2026',
@@ -410,6 +447,13 @@ function AppContent() {
 
   // Audio initialization state for Safari
   const [audioInitialized, setAudioInitialized] = useState(false);
+  // Shared AudioContext for sound effects, created lazily once and reused for
+  // every playSound() call. Previously each call created a brand-new native
+  // AudioContext that was never closed - after a handful of questions the
+  // leaked contexts (and the audio render threads backing them) piled up and
+  // caused intermittent jank, felt most as the answer input freezing briefly
+  // while typing.
+  const sfxAudioContextRef = useRef(null);
 
   // Name validation state
   const [nameError, setNameError] = useState('');
@@ -508,11 +552,19 @@ function AppContent() {
     setConfirmAction(null);
   };
 
+  // Lazily creates the shared sound-effect AudioContext, or returns the existing one.
+  const getSfxAudioContext = () => {
+    if (!sfxAudioContextRef.current || sfxAudioContextRef.current.state === 'closed') {
+      sfxAudioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return sfxAudioContextRef.current;
+  };
+
   // Initialize audio context on first user interaction (Safari requirement)
   const initializeAudio = async () => {
     if (!audioInitialized) {
       try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioContext = getSfxAudioContext();
         if (audioContext.state === 'suspended') {
           await audioContext.resume();
         }
@@ -542,10 +594,10 @@ function AppContent() {
     
     // Ensure audio is initialized before playing sounds
     await initializeAudio();
-    
+
     try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      
+      const audioContext = getSfxAudioContext();
+
       // Resume audio context if it's suspended (Safari requirement)
       if (audioContext.state === 'suspended') {
         try {
@@ -1841,7 +1893,37 @@ function AppContent() {
       return newScore;
     });
 
-    setTimeout(() => {
+    setUserAnswer('');
+
+    // Ensure input field is cleared and focused (especially important for multiplayer)
+    if (answerInputRef.current) {
+      answerInputRef.current.value = '';
+      setTimeout(() => {
+        if (answerInputRef.current && gameActive) {
+          answerInputRef.current.focus();
+        }
+      }, 100);
+    }
+
+    // Give more time to read the correct answer when user gets it wrong
+    const feedbackDuration = isCorrect ? 1500 : 2500; // 1 second longer for wrong answers
+
+    // Clear any existing question timeout
+    if (questionTimeoutRef.current) {
+      clearTimeout(questionTimeoutRef.current);
+    }
+
+    // Reveal the feedback message, then hold it on screen for the full
+    // feedbackDuration before advancing. These two steps used to run as
+    // independent, parallel timeouts (both scheduled from the moment the
+    // answer was submitted), so the "hide feedback and generate next
+    // question" timer could fire before - or right as - the feedback message
+    // actually appeared. On an easy, quickly-answered question that showed up
+    // as the just-answered question flashing back on screen with no feedback
+    // overlay for a beat before the next question replaced it. Nesting the
+    // second timeout inside the first one's callback guarantees the message
+    // is fully shown for feedbackDuration before anything changes underneath it.
+    questionTimeoutRef.current = setTimeout(() => {
       if (isCorrect) {
         playSound('correct');
         const encouragingMessages = [
@@ -1891,58 +1973,32 @@ function AppContent() {
         const randomMessage = helpfulMessages[Math.floor(Math.random() * helpfulMessages.length)];
         setFeedback({ show: true, correct: false, message: randomMessage, correctAnswer });
       }
-    }, 150);
 
-    setUserAnswer('');
-    
-    // Ensure input field is cleared and focused (especially important for multiplayer)
-    if (answerInputRef.current) {
-      answerInputRef.current.value = '';
-      setTimeout(() => {
-        if (answerInputRef.current && gameActive) {
-          answerInputRef.current.focus();
-        }
-      }, 100);
-    }
-    
-    // Give more time to read the correct answer when user gets it wrong
-    const feedbackDuration = isCorrect ? 1500 : 2500; // 1 second longer for wrong answers
-    
-    // Clear any existing question timeout
-    if (questionTimeoutRef.current) {
-      clearTimeout(questionTimeoutRef.current);
-    }
-    
-    // Set timeout to clear feedback and generate new question
-    questionTimeoutRef.current = setTimeout(() => {
-      // Always clear feedback regardless of game state
-      setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+      questionTimeoutRef.current = setTimeout(() => {
+        // Always clear feedback regardless of game state
+        setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
 
-      // Only generate new question if game is still active
-      if (gameActive) {
-        // Handle two-digit mode progression
-        if (gameMode === 'twoDigit') {
-          if (twoDigitQuestionCount < twoDigitMaxQuestions) {
-            setTwoDigitQuestionCount(prev => prev + 1);
-            generateTwoDigitQuestion();
+        // Only generate new question if game is still active
+        if (gameActive) {
+          // Handle two-digit mode progression
+          if (gameMode === 'twoDigit') {
+            if (twoDigitQuestionCount < twoDigitMaxQuestions) {
+              setTwoDigitQuestionCount(prev => prev + 1);
+              generateTwoDigitQuestion();
+            } else {
+              // End game after 10 questions
+              endGame();
+            }
+          } else if (gameMode === 'division') {
+            generateDivisionQuestion();
           } else {
-            // End game after 10 questions
-            endGame();
+            generateQuestion();
           }
-        } else if (gameMode === 'division') {
-          generateDivisionQuestion();
-        } else {
-          generateQuestion();
         }
-      }
 
-      questionTimeoutRef.current = null;
-    }, feedbackDuration);
-    
-    // Additional safety: clear feedback after a maximum time regardless of conditions
-    setTimeout(() => {
-      setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
-    }, Math.max(feedbackDuration, 3000)); // Ensure feedback is cleared after max 3 seconds
+        questionTimeoutRef.current = null;
+      }, feedbackDuration);
+    }, 150);
   };
 
   const endGame = useCallback(() => {
@@ -2214,12 +2270,12 @@ function AppContent() {
               className="submit-button"
               disabled={!userName.trim()}
             >
-              🚀 Enter the monster kingdom!
+              <RocketIcon className="btn-icon" /> Enter the monster kingdom!
             </button>
           </div>
           <div className="version-footer">
             <button className="version-link" onClick={() => setGameMode('teacherAuth')}>
-              👩‍🏫 Teacher Portal
+              <TeacherIcon className="btn-icon" /> Teacher Portal
             </button>
           </div>
         </div>
@@ -2328,6 +2384,9 @@ function AppContent() {
           </div>
           
           <div className="version-footer">
+            <button className="version-link" onClick={() => setGameMode('nameInput')}>
+              <HomeIcon className="btn-icon" /> Home
+            </button>
             <button className="version-link" onClick={() => setGameMode('changelog')}>
               {APP_VERSION}
             </button>
@@ -2336,6 +2395,16 @@ function AppContent() {
             </span>
           </div>
         </div>
+        <a
+          className="feedback-fab"
+          href="https://mathmonsters.featurebase.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Send feedback"
+          aria-label="Send feedback"
+        >
+          <MessageIcon className="feedback-fab-icon" />
+        </a>
       </div>
     );
   }
@@ -2446,10 +2515,12 @@ function AppContent() {
               className="submit-button"
               disabled={teacherAuthLoading}
             >
-              {teacherAuthLoading ? 'Please wait...' : (teacherAuthMode === 'signup' ? '🚀 Create account' : '🚀 Log in')}
+              {teacherAuthLoading ? 'Please wait...' : (
+                <><RocketIcon className="btn-icon" /> {teacherAuthMode === 'signup' ? 'Create account' : 'Log in'}</>
+              )}
             </button>
             <button className="version-link" onClick={() => setGameMode('menu')}>
-              ← Back to menu
+              <ArrowLeftIcon className="btn-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -2515,7 +2586,7 @@ function AppContent() {
               <div key={report.dayKey} className="teacher-report-row">
                 <span className="teacher-report-date">{report.displayDate}</span>
                 <button className="submit-button" onClick={() => handleDownloadReport(report)}>
-                  ⬇️ Download CSV
+                  <DownloadIcon className="btn-icon" /> Download CSV
                 </button>
               </div>
             ))}
@@ -2526,7 +2597,7 @@ function AppContent() {
               Log Out
             </button>
             <button onClick={() => setGameMode('menu')} className="back-button">
-              ← Back to menu
+              <ArrowLeftIcon className="btn-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -2548,15 +2619,15 @@ function AppContent() {
           <p className="teacher-guide-paragraph"><a href="./Multiplication Trainer - Battle Mode Teacher Guide.pdf" target="_blank" rel="noopener noreferrer" className="teacher-guide-link">Teacher Guide: How to Use Battle Mode in Your Classroom</a></p>
           <div className="menu-buttons">
             <button className="mode-button teacher" onClick={() => setGameMode('createSession')}>
-              🍎 Create classroom session
+              <PlusCircleIcon className="btn-icon" /> Create classroom session
               <span className="mode-description">Teachers: start a new math battle for your students!</span>
             </button>
             <button className="mode-button student" onClick={() => setGameMode('joinSession')}>
-              🎒 Join classroom session
+              <BackpackIcon className="btn-icon" /> Join classroom session
               <span className="mode-description">Students: enter a session code to join the battle!</span>
             </button>
             <button className="mode-button back" onClick={() => setGameMode('menu')}>
-              ← Back to menu
+              <ArrowLeftIcon className="btn-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -2577,15 +2648,15 @@ function AppContent() {
           <p>Battle with friends in small group competitions!</p>
           <div className="menu-buttons">
             <button className="mode-button squad-create" onClick={() => setGameMode('createSquadBattle')}>
-              ⚔️ Start Squad Battle
+              <BoltIcon className="btn-icon" /> Start Squad Battle
               <span className="mode-description">Create a battle and invite friends to join!</span>
             </button>
             <button className="mode-button squad-join" onClick={() => setGameMode('joinSquadBattle')}>
-              🛡️ Join Squad Battle
+              <ShieldIcon className="btn-icon" /> Join Squad Battle
               <span className="mode-description">Enter a 3-character code to join a friend's battle!</span>
             </button>
             <button className="mode-button back" onClick={() => setGameMode('menu')}>
-              ← Back to menu
+              <ArrowLeftIcon className="btn-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -2658,7 +2729,7 @@ function AppContent() {
               onClick={() => handleCreateSquadBattle('quickClash')}
               disabled={isCreatingSquad}
             >
-              ⚡ Quick Clash
+              <BoltIcon className="btn-icon" /> Quick Clash
               <span className="mode-description">3 minutes • Fast-paced competition</span>
             </button>
 
@@ -2667,7 +2738,7 @@ function AppContent() {
               onClick={() => handleCreateSquadBattle('survival')}
               disabled={isCreatingSquad}
             >
-              💀 Survival
+              <SkullIcon className="btn-icon" /> Survival
               <span className="mode-description">Last player standing wins!</span>
             </button>
 
@@ -2676,7 +2747,7 @@ function AppContent() {
               onClick={() => setGameMode('squadSelect')}
               disabled={isCreatingSquad}
             >
-              ← Back to squad options
+              <ArrowLeftIcon className="btn-icon" /> Back to squad options
             </button>
           </div>
 
@@ -2808,7 +2879,7 @@ function AppContent() {
               className={`mode-button ready-button ${isPlayerReady ? 'ready' : 'not-ready'}`}
               onClick={handlePlayerReady}
             >
-              {isPlayerReady ? '✅ Ready!' : '⏳ I\'m Ready!'}
+              {isPlayerReady ? (<><CheckIcon className="btn-icon" /> Ready!</>) : (<><HourglassIcon className="btn-icon" /> I'm Ready!</>)}
             </button>
 
             {isSquadHost && (
@@ -2817,14 +2888,14 @@ function AppContent() {
                 onClick={handleStartBattle}
                 disabled={!allReady || playerCount < 2}
               >
-                🚀 Start Battle!
+                <RocketIcon className="btn-icon" /> Start Battle!
                 {!allReady && <span className="button-note">All players must be ready</span>}
                 {playerCount < 2 && <span className="button-note">Need at least 2 players</span>}
               </button>
             )}
 
             <button className="mode-button back" onClick={handleLeaveBattle}>
-              ← Leave Squad
+              <ArrowLeftIcon className="btn-icon" /> Leave Squad
             </button>
           </div>
         </div>
@@ -2917,7 +2988,7 @@ function AppContent() {
               onClick={handleJoinSquadBattle}
               disabled={!squadInputCode.trim() || isJoiningSquad}
             >
-              🛡️ Join Battle!
+              <ShieldIcon className="btn-icon" /> Join Battle!
               {isJoiningSquad && <span className="mode-description">Joining...</span>}
             </button>
 
@@ -2926,7 +2997,7 @@ function AppContent() {
               onClick={() => setGameMode('squadSelect')}
               disabled={isJoiningSquad}
             >
-              ← Back to squad options
+              <ArrowLeftIcon className="btn-icon" /> Back to squad options
             </button>
           </div>
 
@@ -3119,7 +3190,7 @@ function AppContent() {
                     disabled={!userAnswer.trim() || !gameActive || timeLeft === 0}
                     className="submit-button"
                   >
-                    ⚔️ Attack!
+                    <BoltIcon className="btn-icon" /> Attack!
                   </button>
                 </div>
               </>
@@ -3153,11 +3224,11 @@ function AppContent() {
           <div className="game-controls">
             {timeLeft === 0 ? (
               <button className="mode-button results" onClick={() => setGameMode('squadResults')}>
-                🏆 View Results
+                <TrophyIcon className="btn-icon" /> View Results
               </button>
             ) : (
               <button className="back-button" onClick={handleLeaveSquadBattle}>
-                ← Leave Battle
+                <ArrowLeftIcon className="btn-icon" /> Leave Battle
               </button>
             )}
           </div>
@@ -3362,7 +3433,7 @@ function AppContent() {
                     disabled={!userAnswer.trim() || isEliminated || gameOver}
                     className="submit-button"
                   >
-                    ⚔️ Attack!
+                    <BoltIcon className="btn-icon" /> Attack!
                   </button>
                 </div>
               </>
@@ -3399,11 +3470,11 @@ function AppContent() {
           <div className="game-controls">
             {gameOver ? (
               <button className="mode-button results" onClick={() => setGameMode('squadResults')}>
-                🏆 View Results
+                <TrophyIcon className="btn-icon" /> View Results
               </button>
             ) : (
               <button className="back-button" onClick={handleLeaveSurvival}>
-                ← Leave Survival
+                <ArrowLeftIcon className="btn-icon" /> Leave Survival
               </button>
             )}
           </div>
@@ -3551,10 +3622,10 @@ function AppContent() {
 
           <div className="results-actions">
             <button className="play-again-btn" onClick={() => setGameMode('squadSelect')}>
-              🔄 Play Another Battle
+              <RefreshIcon className="btn-icon" /> Play Another Battle
             </button>
             <button className="back-home-btn" onClick={handleReturnToMenu}>
-              🏠 Return to Kingdom
+              <HomeIcon className="btn-icon" /> Return to Kingdom
             </button>
           </div>
         </div>
@@ -3652,10 +3723,10 @@ function AppContent() {
               onClick={handleCreateSession}
               disabled={isCreating}
             >
-              {isCreating ? '🔄 Creating...' : '🚀 Create session'}
+              {isCreating ? (<><RefreshIcon className="btn-icon" /> Creating...</>) : (<><RocketIcon className="btn-icon" /> Create session</>)}
             </button>
             <button className="mode-button back" onClick={() => setGameMode('multiplayerSelect')}>
-              ← Back
+              <ArrowLeftIcon className="btn-icon" /> Back
             </button>
           </div>
         </div>
@@ -3766,14 +3837,14 @@ function AppContent() {
               onClick={handleJoinSession}
               disabled={isJoining || !inputCode.trim() || inputCode.length !== 4}
             >
-              {isJoining ? '🔄 Joining...' : '🎒 Join battle!'}
+              {isJoining ? (<><RefreshIcon className="btn-icon" /> Joining...</>) : (<><BackpackIcon className="btn-icon" /> Join battle!</>)}
             </button>
             <button className="mode-button back" onClick={async () => {
               // Clean up any partial multiplayer state
               await cleanupMultiplayerState();
               setGameMode('multiplayerSelect');
             }}>
-              ← Back
+              <ArrowLeftIcon className="btn-icon" /> Back
             </button>
           </div>
         </div>
@@ -3828,14 +3899,14 @@ function AppContent() {
               onClick={handleStartGame}
               disabled={!sessionData?.students || sessionData.students.length === 0}
             >
-              🚀 Start battle!
+              <RocketIcon className="btn-icon" /> Start battle!
             </button>
             <button className="mode-button back" onClick={() => {
               if (sessionUnsubscribe) sessionUnsubscribe();
               setGameMode('menu');
               setIsMultiplayer(false);
             }}>
-              ← Cancel Session
+              <ArrowLeftIcon className="btn-icon" /> Cancel Session
             </button>
           </div>
         </div>
@@ -3880,7 +3951,7 @@ function AppContent() {
               await cleanupMultiplayerState();
               setGameMode('menu');
             }}>
-              ← Leave Session
+              <ArrowLeftIcon className="btn-icon" /> Leave Session
             </button>
           </div>
         </div>
@@ -3957,7 +4028,7 @@ function AppContent() {
                   className="mode-button teacher" 
                   onClick={() => setGameMode('multiplayerResults')}
                 >
-                  📊 View Final Results
+                  <ChartIcon className="btn-icon" /> View Final Results
                 </button>
                 <button 
                   className="mode-button back" 
@@ -3971,7 +4042,7 @@ function AppContent() {
                     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
                   }}
                 >
-                  🏠 Back to menu
+                  <HomeIcon className="btn-icon" /> Back to menu
                 </button>
               </>
             ) : (
@@ -3988,7 +4059,7 @@ function AppContent() {
                   );
                 }}
               >
-                🛑 End battle now
+                <StopIcon className="btn-icon" /> End battle now
               </button>
             )}
           </div>
@@ -4074,7 +4145,7 @@ function AppContent() {
                 className="mode-button teacher" 
                 onClick={() => setGameMode('teacherLobby')}
               >
-                🔄 New Battle
+                <RefreshIcon className="btn-icon" /> New Battle
               </button>
             )}
             <button 
@@ -4089,7 +4160,7 @@ function AppContent() {
                 setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
               }}
             >
-              🏠 Back to menu
+              <HomeIcon className="btn-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -4124,7 +4195,7 @@ function AppContent() {
           </div>
           <div className="menu-buttons">
             <button className="mode-button back" onClick={() => setGameMode('menu')}>
-              ← Back to menu
+              <ArrowLeftIcon className="btn-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -4173,7 +4244,7 @@ function AppContent() {
                   onClick={() => clearHistory(previousGameMode === 'timed' ? 'timed' : 'advanced')}
                   title="Clear history"
                 >
-                  🗑️
+                  <TrashIcon className="btn-icon btn-icon--standalone" />
                 </button>
               </div>
               <div className="history-list">
@@ -4196,7 +4267,7 @@ function AppContent() {
           )}
 
           <button className="back-button" onClick={backToMenu}>
-            🏠 Return to monster kingdom
+            <HomeIcon className="btn-icon" /> Return to monster kingdom
           </button>
         </div>
       </div>
@@ -4227,7 +4298,7 @@ function AppContent() {
             <div className="error-icon">!</div>
             <div className="error-text">{errorMessage}</div>
             <button className="error-close-button" onClick={hideErrorMessage}>
-              ✕ Close
+              <CloseIcon className="btn-icon" /> Close
             </button>
           </div>
         </div>
@@ -4237,14 +4308,14 @@ function AppContent() {
       {showConfirm && (
         <div className="error-overlay" onClick={hideConfirmDialog}>
           <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="confirm-icon">❓</div>
+            <div className="confirm-icon"><QuestionMarkCircleIcon className="btn-icon btn-icon--standalone" /></div>
             <div className="confirm-text">{confirmMessage}</div>
             <div className="confirm-buttons">
               <button className="confirm-button confirm-yes" onClick={handleConfirm}>
-                ✓ Yes
+                <CheckIcon className="btn-icon" /> Yes
               </button>
               <button className="confirm-button confirm-no" onClick={hideConfirmDialog}>
-                ✕ Cancel
+                <CloseIcon className="btn-icon" /> Cancel
               </button>
             </div>
           </div>
@@ -4281,7 +4352,7 @@ function AppContent() {
                       className="submit-button detective-submit next-question-btn"
                       style={{ marginTop: '15px' }}
                     >
-                      📖 Next Question
+                      <ArrowRightIcon className="btn-icon" /> Next Question
                     </button>
                   </>
                 )}
@@ -4338,7 +4409,7 @@ function AppContent() {
                       : (!detectiveInput.factor1 || !detectiveInput.factor2)
                   }
                 >
-                  🔍 Solve case!
+                  <SearchIcon className="btn-icon" /> Solve case!
                 </button>
               </div>
             )}
@@ -4346,10 +4417,10 @@ function AppContent() {
 
           <div className="game-controls">
             <button onClick={endGame} className="done-button">
-              🎆 Close detective agency!
+              <CloseIcon className="btn-icon" /> Close detective agency!
             </button>
             <button onClick={backToMenu} className="back-button">
-              🏠 Return to kingdom
+              <HomeIcon className="btn-icon" /> Return to kingdom
             </button>
           </div>
         </div>
@@ -4590,14 +4661,14 @@ function AppContent() {
                       className="submit-button retry-button"
                       style={{ marginTop: '15px', marginRight: '10px' }}
                     >
-                      🔄 Try Again
+                      <RefreshIcon className="btn-icon" /> Try Again
                     </button>
                     <button
                       onClick={moveToNextTwoDigitQuestion}
                       className="submit-button next-button"
                       style={{ marginTop: '15px' }}
                     >
-                      ➡️ Next Question
+                      <ArrowRightIcon className="btn-icon" /> Next Question
                     </button>
                   </div>
                 )}
@@ -4707,7 +4778,7 @@ function AppContent() {
               </button>
             )}
             <button onClick={backToMenu} className="back-button">
-              🏠 Return to kingdom
+              <HomeIcon className="btn-icon" /> Return to kingdom
             </button>
           </div>
         </div>
