@@ -1,0 +1,37 @@
+{
+  "files": {
+    "main.css": "./static/css/main.2bd256a9.css",
+    "main.js": "./static/js/main.571efa68.js",
+    "static/js/453.b7cf8886.chunk.js": "./static/js/453.b7cf8886.chunk.js",
+    "index.html": "./index.html",
+    "static/media/message.svg": "./static/media/message.a9b7eb958536499b6d36cf067ceb743a.svg",
+    "static/media/skull.svg": "./static/media/skull.84023a97bed11c5e08aee2f3fbd5d3f2.svg",
+    "static/media/rocket.svg": "./static/media/rocket.615bd1ad99d4bde7cfae927725b381cc.svg",
+    "static/media/trophy.svg": "./static/media/trophy.5df40265b7328a951b05558c60237e0f.svg",
+    "static/media/chart.svg": "./static/media/chart.efdbb0530c09171c9246008d22bd5765.svg",
+    "static/media/refresh.svg": "./static/media/refresh.c68a61a8c705d42cb6b66a9ab685c8d0.svg",
+    "static/media/backpack.svg": "./static/media/backpack.e49633d88f4ebcee8417fcf359546de1.svg",
+    "static/media/teacher.svg": "./static/media/teacher.8e8882b57a1f81e24d87630245af94d7.svg",
+    "static/media/trash.svg": "./static/media/trash.218a5bc461a6e50385ca6e71cd7ad7d2.svg",
+    "static/media/hourglass.svg": "./static/media/hourglass.a11b4544c2c900ce5bf9e291e8bad672.svg",
+    "static/media/home.svg": "./static/media/home.aeab4a7ec5ed7a8af355f0f920fc73fe.svg",
+    "static/media/plus-circle.svg": "./static/media/plus-circle.ffae1a3325156c80e3892919f0a8ba3c.svg",
+    "static/media/download.svg": "./static/media/download.492f9c8b3c6d3af4502114105460642c.svg",
+    "static/media/search.svg": "./static/media/search.1d12ccf62cc3bda3b53bef397baf5100.svg",
+    "static/media/question-mark-circle.svg": "./static/media/question-mark-circle.c3c3009bd2456bf8b2b305d1626a5269.svg",
+    "static/media/close.svg": "./static/media/close.bc0632a245b9a6e1ee96c9e898929dc1.svg",
+    "static/media/arrow-right.svg": "./static/media/arrow-right.fa832fb425a50c86bfb56ee28dfc4b4c.svg",
+    "static/media/arrow-left.svg": "./static/media/arrow-left.1208004ab46846586a061c1fe78a6cff.svg",
+    "static/media/check.svg": "./static/media/check.5faa6c56288249c242d7df2da5f6b7d3.svg",
+    "static/media/shield.svg": "./static/media/shield.4cc802b1c191299c41e1118c3d529180.svg",
+    "static/media/bolt.svg": "./static/media/bolt.23a0e17e59fa99aa3a6c7d6688d98f52.svg",
+    "static/media/stop.svg": "./static/media/stop.74470149e4b1b2f746e9d0b6209513db.svg",
+    "main.2bd256a9.css.map": "./static/css/main.2bd256a9.css.map",
+    "main.571efa68.js.map": "./static/js/main.571efa68.js.map",
+    "453.b7cf8886.chunk.js.map": "./static/js/453.b7cf8886.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.2bd256a9.css",
+    "static/js/main.571efa68.js"
+  ]
+}
