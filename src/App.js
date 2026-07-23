@@ -112,6 +112,13 @@ const modeToPath = {
   'teacherDashboard': '/teacher/dashboard'
 };
 
+// Background music tracks - one is picked at random each time a game session starts
+const BACKGROUND_MUSIC_TRACKS = [
+  '/background-audio-01.mp3',
+  '/background-audio-02.mp3',
+  '/background-audio-03.mp3'
+];
+
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -876,36 +883,15 @@ function AppContent() {
   // Spooky background music system
   const [backgroundMusic, setBackgroundMusic] = useState(null);
 
-  // End music playback function
-  const playEndMusic = async () => {
-    try {
-      // Initialize audio on user interaction
-      await initializeAudio();
-      
-      const audio = new Audio();
-      audio.src = process.env.PUBLIC_URL + '/end.mp3';
-      audio.volume = 0.4; // Slightly louder than background music
-      
-      // Play the end music
-      try {
-        await audio.play();
-        console.log('🎵 Playing end music');
-      } catch (playError) {
-        console.log('End music playback failed:', playError);
-      }
-    } catch (error) {
-      console.log('End music loading failed:', error);
-    }
-  };
-
   const createSpookyMusic = () => {
     try {
       // Try to load custom audio file first, fallback to procedural music
       const audio = new Audio();
-      
+
       // Try custom audio file in public folder
-      // Background music file
-      audio.src = process.env.PUBLIC_URL + '/paperboy.mp3';
+      // Background music file - randomized per session
+      const track = BACKGROUND_MUSIC_TRACKS[Math.floor(Math.random() * BACKGROUND_MUSIC_TRACKS.length)];
+      audio.src = process.env.PUBLIC_URL + track;
       audio.loop = true;
       audio.volume = 0.3;
       
@@ -2013,12 +1999,7 @@ function AppContent() {
   const endGame = useCallback(() => {
     playSound('click');
     stopBackgroundMusic();
-    
-    // Only play end music for single-player games
-    if (!isMultiplayer) {
-      playEndMusic();
-    }
-    
+
     setGameActive(false);
 
     // Teacher Portal: log this completed attempt (no-op if no tracking was started, e.g. multiplayer)
@@ -2177,7 +2158,7 @@ function AppContent() {
       const activePlayers = squadData.players.filter(p => !p.isEliminated);
       const gameOver = activePlayers.length <= 1;
       if (gameOver && squadData.isStarted) {
-        // Game over - no sound needed (end music plays via playEndMusic)
+        // Game over - no sound needed
         flushUsageTracking(score, 'completed');
       }
     }
@@ -2244,10 +2225,6 @@ function AppContent() {
             <label htmlFor="name-input">What's your name?</label>
             <div className="name-guidelines">
               <p>Enter your first and last name so your teacher can identify you</p>
-              <div className="name-examples">
-                <span className="good-example">✅ Emma Johnson</span>
-                <span className="good-example">✅ Alex Smith</span>
-              </div>
             </div>
             <input
               id="name-input"
@@ -2286,7 +2263,7 @@ function AppContent() {
             )}
             <button
               onClick={handleNameSubmit}
-              className="submit-button"
+              className="submit-button enter-kingdom-button"
               disabled={!userName.trim()}
             >
               <RocketIcon className="btn-icon" /> Enter the monster kingdom!
@@ -3993,6 +3970,26 @@ function AppContent() {
         <div className="floating-skull">💀</div>
         <div className="floating-robot">🤖</div>
         <div className="floating-demon">👹</div>
+
+        {/* Confirmation Dialog Overlay - this screen has its own early return, so it
+            needs its own copy; it doesn't reach the shared one at the bottom of the file. */}
+        {showConfirm && (
+          <div className="error-overlay" onClick={hideConfirmDialog}>
+            <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
+              <div className="confirm-icon"><QuestionMarkCircleIcon className="btn-icon btn-icon--standalone" /></div>
+              <div className="confirm-text">{confirmMessage}</div>
+              <div className="confirm-buttons">
+                <button className="confirm-button confirm-yes" onClick={handleConfirm}>
+                  <CheckIcon className="btn-icon" /> Yes
+                </button>
+                <button className="confirm-button confirm-no" onClick={hideConfirmDialog}>
+                  <CloseIcon className="btn-icon" /> Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="menu-container">
           <h1>🍎 Battle monitor</h1>
           <div className="session-info">
