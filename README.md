@@ -2,7 +2,7 @@
 
 An engaging, gamified multiplication (and division) practice app designed for elementary school students. Features single-player practice, multiplayer classroom battles, detective-style problem solving, and a self-service teacher portal with usage reporting.
 
-![Version](https://img.shields.io/badge/version-4.0.1-blue)
+![Version](https://img.shields.io/badge/version-4.0.2-blue)
 ![React](https://img.shields.io/badge/React-19.1.1-61dafb)
 ![Firebase](https://img.shields.io/badge/Firebase-12.1.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -49,19 +49,14 @@ An engaging, gamified multiplication (and division) practice app designed for el
 - Progressive Web App (PWA) support for offline play
 - Mobile-optimized interface
 
-## 🆕 What's New in v4.0.1
+## 🆕 What's New in v4.0.2
 
 ### Bug Fixes
-- Fixed a performance bug where the answer input could briefly freeze while typing, caused by a new browser audio context being created (and never closed) on every sound effect
-- Fixed a timing bug where answering a question quickly could briefly flash the previous question again before the next one loaded
-- Fixed the Teacher Portal's Log In / Create Account control: now a centered toggle switch instead of a left-aligned pair of buttons with a stray gray background
+- Fixed a bug where starting a Squad Showdown battle caused the screen to flicker violently (with repeated audio) on both the host's and the joining players' screens
+- Fixed the same routing bug in Battle Mode's game start, which could occasionally cause a brief flicker for students as a battle began
+- Fixed a Firestore security rule bug that silently blocked every teacher from creating a Battle Mode classroom session
 
-### Polish
-- Added a Home link to the main menu so students and teachers can get back to the name-entry screen without being logged out
-- Replaced emoji icons on all buttons and links throughout the app with a consistent set of stroke-based icons
-- Added a floating Feedback button on the main menu linking to the public feedback board for bug reports and feature requests
-
-See [prod/v4.0.1/RELEASE_NOTES.md](./prod/v4.0.1/RELEASE_NOTES.md) for full details.
+See [prod/v4.0.2/RELEASE_NOTES.md](./prod/v4.0.2/RELEASE_NOTES.md) for full details.
 
 ## 🚀 Getting Started
 
@@ -120,7 +115,8 @@ multiply-monsters/
 │   ├── teacherUtils.js  # Teacher auth + Firestore functions
 │   └── reportUtils.js   # CSV/usage report aggregation
 ├── prod/                # Production builds
-│   ├── v4.0.1/         # Latest release
+│   ├── v4.0.2/         # Latest release
+│   ├── v4.0.1/
 │   ├── v4.0.0/
 │   └── ...
 ├── firestore.rules      # Firestore security rules
@@ -215,6 +211,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 See the in-app version history screen or [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.
 
 ### Recent Releases
+- **v4.0.2** (Jul 2026) - Bug fixes: Squad Showdown and Battle Mode start-screen flicker, and a Firestore rules bug blocking Battle Mode session creation
 - **v4.0.1** (Jul 2026) - Bug fixes and polish: input-freeze fix, question-timing fix, Teacher Portal toggle redesign, stroke-icon pass, and a feedback button
 - **v4.0.0** (Jul 2026) - Teacher Portal: self-service accounts and a usage dashboard with CSV export
 - **v3.4.0** (Jan 2026) - Division Support: standalone Division mode plus a mix-in toggle for timed/multiplayer modes
@@ -248,7 +245,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 For issues, questions, or suggestions:
 - Open an issue on [GitHub](https://github.com/fnkdumplin1/multiply-monsters/issues)
-- Check the [Teacher Guide](<./prod/v4.0.1/Multiplication Trainer - Battle Mode Teacher Guide.pdf>) for classroom usage
+- Check the [Teacher Guide](<./prod/v4.0.2/Multiplication Trainer - Battle Mode Teacher Guide.pdf>) for classroom usage
 
 ---
 

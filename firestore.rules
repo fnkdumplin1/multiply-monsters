@@ -9,10 +9,10 @@ service cloud.firestore {
 
       // Create sessions with validation
       allow create: if sessionId.matches('^[A-Z0-9]{4}$')
-                    && resource.data.code == sessionId
-                    && resource.data.teacherName is string
-                    && resource.data.teacherName.size() > 0
-                    && resource.data.teacherName.size() <= 50;
+                    && request.resource.data.code == sessionId
+                    && request.resource.data.teacherName is string
+                    && request.resource.data.teacherName.size() > 0
+                    && request.resource.data.teacherName.size() <= 50;
 
       // Update sessions with basic protection
       allow update: if resource.data.code == sessionId

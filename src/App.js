@@ -232,8 +232,17 @@ function AppContent() {
   }, [gameMode, currentTeacher?.uid]);
 
   // App version and changelog
-  const APP_VERSION = 'v4.0.1';
+  const APP_VERSION = 'v4.0.2';
   const CHANGELOG = [
+    {
+      version: 'v4.0.2',
+      date: '07-23-2026',
+      features: [
+        'Fixed a bug where starting a Squad Showdown battle caused the screen to flicker violently (with repeated audio) on both the host\'s and the joining players\' screens',
+        'Fixed the same routing bug in Battle Mode\'s game start, which could occasionally cause a brief flicker for students as a battle began',
+        'Fixed a Firestore security rule bug that silently blocked every teacher from creating a Battle Mode classroom session'
+      ]
+    },
     {
       version: 'v4.0.1',
       date: '07-17-2026',
@@ -2110,20 +2119,30 @@ function AppContent() {
     };
   }, [stopBackgroundMusic]);
 
-  // Navigate to battle when squad battle starts
+  // Navigate to battle when squad battle starts.
+  //
+  // Calls navigate() directly here, NOT setGameMode(). setGameMode writes gameMode
+  // state AND the URL in the same call, which races against the URL-sync effect
+  // above: that effect can see the URL momentarily still pointing at 'squadLobby'
+  // and set gameMode back - which then re-satisfies this effect's condition
+  // (squadData.isStarted stays true forever, so there's no latch to stop it firing
+  // again), pushing gameMode forward once more, and so on. Unlike the one-shot
+  // teacherAuth/teacherDashboard race this mirrors, that makes it loop forever
+  // instead of flickering once - which is what caused the violent squad-battle-start
+  // flicker (both host and joining sessions) reported in production. Calling
+  // navigate() alone makes the URL-sync effect the single writer of gameMode for
+  // this transition, so there's no second writer left to race against.
   useEffect(() => {
     if (gameMode === 'squadLobby' && squadData?.isStarted) {
       playSound('start');
       setIncludeDivision(squadData?.includeDivision || false);
 
       // Set appropriate game mode based on battle type
-      if (squadData.battleType === 'survival') {
-        setGameMode('squadSurvival');
-      } else {
-        setGameMode('squadBattle');
-      }
+      const nextMode = squadData.battleType === 'survival' ? 'squadSurvival' : 'squadBattle';
+      navigate(modeToPath[nextMode]);
     }
-  }, [gameMode, squadData?.isStarted, squadData?.battleType, playSound]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameMode, squadData?.isStarted, squadData?.battleType, playSound, navigate]);
 
   // Auto-start squad battle when entering battle mode
   useEffect(() => {
@@ -3786,7 +3805,11 @@ function AppContent() {
               setIncludeDivision(data.includeDivision || false);
               // Timer will be calculated from server timestamp in useEffect
               setPreviousGameMode(selectedMode);
-              setGameMode(selectedMode);
+              // navigate() directly (not setGameMode()) - this fires from a Firestore
+              // listener callback, not a user click, so it can race the URL-sync effect
+              // the same way the squad-battle-start transition did (see that effect's
+              // comment above). Let the URL-sync effect be the sole writer of gameMode.
+              navigate(modeToPath[selectedMode] || '/');
 
               // Start countdown for multiplayer students
               startCountdown(() => {
