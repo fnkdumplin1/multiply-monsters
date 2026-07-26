@@ -2426,6 +2426,14 @@ function AppContent() {
             <button className="version-link" onClick={() => setGameMode('changelog')}>
               {APP_VERSION}
             </button>
+            <a
+              className="version-link"
+              href="./Multiplication Trainer - Battle Mode Teacher Guide.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <TeacherIcon className="btn-icon" /> Teacher Guide
+            </a>
             <span className="copyright-text">
               Copyright {new Date().getFullYear()}, Eric Ellis Design
             </span>
