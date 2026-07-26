@@ -140,13 +140,29 @@ export const updateStudentScore = async (code, studentName, newScore, streak = 0
   }
 };
 
-// Start the game session (teacher only)
+// Start the game session (teacher only). Also resets every joined student's
+// score/streak to zero - this doubles as the "New Battle" restart path (same
+// session code, same roster), so without this reset a restarted battle would
+// reuse each student's tally from the previous round.
 export const startSession = async (code) => {
   try {
     const sessionRef = doc(db, 'sessions', code);
+    const sessionSnap = await getDoc(sessionRef);
+
+    if (!sessionSnap.exists()) return false;
+
+    const sessionData = sessionSnap.data();
+    const resetStudents = (sessionData.students || []).map(student => ({
+      ...student,
+      score: { correct: 0, total: 0 },
+      currentStreak: 0,
+      bestStreak: 0
+    }));
+
     await updateDoc(sessionRef, {
       startedAt: serverTimestamp(),
-      isActive: true
+      isActive: true,
+      students: resetStudents
     });
     return true;
   } catch (error) {

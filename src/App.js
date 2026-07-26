@@ -239,8 +239,18 @@ function AppContent() {
   }, [gameMode, currentTeacher?.uid]);
 
   // App version and changelog
-  const APP_VERSION = 'v4.0.2';
+  const APP_VERSION = 'v4.0.3';
   const CHANGELOG = [
+    {
+      version: 'v4.0.3',
+      date: '07-26-2026',
+      features: [
+        'Fixed Squad Showdown\'s "Play Another Battle" not actually resetting the game - the host (and anyone still connected) would see the previous battle\'s score and timer instead of a fresh start',
+        'Fixed the Squad Showdown join-code field not clearing between battles, so it could show a stale code left over from a previous game',
+        'Fixed a Battle Mode bug where a teacher starting a "New Battle" could leave a student stuck on the previous round\'s results screen forever, with no way to join the new round short of manually leaving and rejoining',
+        'Fixed Battle Mode round restarts not resetting each student\'s score and streak, so a new round could start showing leftover stats from the previous one'
+      ]
+    },
     {
       version: 'v4.0.2',
       date: '07-23-2026',
@@ -477,7 +487,12 @@ function AppContent() {
   // Countdown states
   const [countdown, setCountdown] = useState(null);
   const [isCountingDown, setIsCountingDown] = useState(false);
-  const [hasStartedSession, setHasStartedSession] = useState(false);
+  // Tracks the last session `startedAt` (ms) that already triggered an
+  // auto-start for this student, so a teacher's same-code "New Battle"
+  // restart (a new startedAt) can trigger it again. See the join-session
+  // listener for the comparison. A ref (not state) because it's read/written
+  // inside a Firestore listener callback and must never go stale.
+  const lastAutoStartedAtRef = useRef(null);
 
   // Error message states
   const [errorMessage, setErrorMessage] = useState('');
@@ -558,7 +573,7 @@ function AppContent() {
     setInputCode('');
     setIsJoining(false);
     setGameStartTime(null);
-    setHasStartedSession(false);
+    lastAutoStartedAtRef.current = null;
     
     // Clear error messages and dialogs
     setShowError(false);
@@ -854,7 +869,7 @@ function AppContent() {
 
   // Countdown function
   const startCountdown = (callback) => {
-    console.log('🔥 COUNTDOWN TRIGGERED! hasStartedSession:', hasStartedSession, 'gameActive:', gameActive, 'isMultiplayer:', isMultiplayer);
+    console.log('🔥 COUNTDOWN TRIGGERED! gameActive:', gameActive, 'isMultiplayer:', isMultiplayer);
     console.trace('Countdown call stack');
     setIsCountingDown(true);
     setCountdown(3);
@@ -2035,6 +2050,31 @@ function AppContent() {
     }
   }, [gameMode, score, stopBackgroundMusic, isMultiplayer, flushUsageTracking]);
 
+  // Resets every piece of Squad Showdown state (score, timer, code, roster).
+  // Without this, leftover state from the finished battle - most importantly
+  // timeLeft sitting at 0 - blocks the "Auto-start squad battle" effect's
+  // `timeLeft !== 0` guard from ever firing for the next battle, so a new
+  // game silently reuses the previous one's stats instead of starting fresh.
+  const resetSquadBattleState = useCallback(() => {
+    if (squadUnsubscribe) {
+      squadUnsubscribe();
+      setSquadUnsubscribe(null);
+    }
+    setIsSquadBattle(false);
+    setSquadCode('');
+    setSquadData(null);
+    setIsSquadHost(false);
+    setIsPlayerReady(false);
+    setPlayersReady(new Set());
+    setSquadInputCode('');
+    setGameActive(false);
+    setTimeLeft(60);
+    setScore({ correct: 0, total: 0 });
+    setCurrentStreak(0);
+    setPlayerLives(3);
+    setIsEliminated(false);
+  }, [squadUnsubscribe]);
+
   useEffect(() => {
     let timer;
 
@@ -2790,21 +2830,9 @@ function AppContent() {
     };
 
     const handleLeaveBattle = async () => {
-      if (squadUnsubscribe) {
-        squadUnsubscribe();
-        setSquadUnsubscribe(null);
-      }
-
       await leaveSquadBattle(squadCode, userName);
 
-      // Reset squad states
-      setIsSquadBattle(false);
-      setSquadCode('');
-      setSquadData(null);
-      setIsSquadHost(false);
-      setIsPlayerReady(false);
-      setPlayersReady(new Set());
-
+      resetSquadBattleState();
       setGameMode('menu');
     };
 
@@ -3482,26 +3510,7 @@ function AppContent() {
   // Squad Battle Results Screen
   if (gameMode === 'squadResults') {
     const handleReturnToMenu = async () => {
-      // Clean up squad battle state
-      if (squadUnsubscribe) {
-        squadUnsubscribe();
-        setSquadUnsubscribe(null);
-      }
-
-      // Reset all squad battle states
-      setIsSquadBattle(false);
-      setSquadCode('');
-      setSquadData(null);
-      setIsSquadHost(false);
-      setIsPlayerReady(false);
-      setPlayersReady(new Set());
-      setGameActive(false);
-      setTimeLeft(60);
-      setScore({ correct: 0, total: 0 });
-      setCurrentStreak(0);
-      setPlayerLives(3);
-      setIsEliminated(false);
-
+      resetSquadBattleState();
       setGameMode('menu');
     };
 
@@ -3617,7 +3626,7 @@ function AppContent() {
           </div>
 
           <div className="results-actions">
-            <button className="play-again-btn" onClick={() => setGameMode('squadSelect')}>
+            <button className="play-again-btn" onClick={() => { resetSquadBattleState(); setGameMode('squadSelect'); }}>
               <RefreshIcon className="btn-icon" /> Play Another Battle
             </button>
             <button className="back-home-btn" onClick={handleReturnToMenu}>
@@ -3761,43 +3770,51 @@ function AppContent() {
           }
           
           setSessionData(data);
-          // Auto-start game when teacher starts it - use callback to get current state
-          setHasStartedSession(currentHasStarted => {
-            console.log('📡 Session data update:', { 
-              hasStartedAt: !!data?.startedAt, 
-              currentHasStarted,
-              studentsCount: data?.students?.length 
-            });
-            
-            if (data && data.startedAt && !currentHasStarted) {
-              console.log('🎮 Teacher started the game! Auto-starting for student...');
-              
-              // Clear any pending question timeouts
-              if (questionTimeoutRef.current) {
-                clearTimeout(questionTimeoutRef.current);
-                questionTimeoutRef.current = null;
-              }
-              
-              const selectedMode = data.gameMode || 'timed';
-              setIncludeDivision(data.includeDivision || false);
-              // Timer will be calculated from server timestamp in useEffect
-              setPreviousGameMode(selectedMode);
-              // navigate() directly (not setGameMode()) - this fires from a Firestore
-              // listener callback, not a user click, so it can race the URL-sync effect
-              // the same way the squad-battle-start transition did (see that effect's
-              // comment above). Let the URL-sync effect be the sole writer of gameMode.
-              navigate(modeToPath[selectedMode] || '/');
 
-              // Start countdown for multiplayer students
-              startCountdown(() => {
-                setGameActive(true);
-                generateQuestion();
-              });
-              // Note: Don't restart background music here as it should already be playing
-              return true; // Set hasStartedSession to true
+          // Auto-start (or restart) the game whenever the teacher sets a NEW
+          // startedAt timestamp on the session. Comparing timestamps - instead
+          // of a fired-once boolean - lets a teacher's "New Battle" restart
+          // (which reuses the same session document and code) pull already-
+          // connected students into the new round. A boolean latch would stay
+          // permanently tripped after the first round and never fire again,
+          // leaving reconnected students stuck showing the previous round's
+          // results while everyone else moves on.
+          const startedAtMs = data?.startedAt ? data.startedAt.toMillis() : null;
+          if (startedAtMs && startedAtMs !== lastAutoStartedAtRef.current) {
+            console.log('🎮 Teacher started the game! Auto-starting for student...');
+            lastAutoStartedAtRef.current = startedAtMs;
+
+            // Clear any pending question timeouts
+            if (questionTimeoutRef.current) {
+              clearTimeout(questionTimeoutRef.current);
+              questionTimeoutRef.current = null;
             }
-            return currentHasStarted; // Keep current value
-          });
+
+            const selectedMode = data.gameMode || 'timed';
+            setIncludeDivision(data.includeDivision || false);
+            setPreviousGameMode(selectedMode);
+
+            // Reset round state so a restarted battle doesn't inherit the
+            // previous round's score, streak, timer, or leftover feedback.
+            setScore({ correct: 0, total: 0 });
+            setCurrentStreak(0);
+            setUserAnswer('');
+            setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+            setTimeLeft(data.timeLimit || 60);
+
+            // navigate() directly (not setGameMode()) - this fires from a Firestore
+            // listener callback, not a user click, so it can race the URL-sync effect
+            // the same way the squad-battle-start transition did (see that effect's
+            // comment above). Let the URL-sync effect be the sole writer of gameMode.
+            navigate(modeToPath[selectedMode] || '/');
+
+            // Start countdown for multiplayer students
+            startCountdown(() => {
+              setGameActive(true);
+              generateQuestion();
+            });
+            // Note: Don't restart background music here as it should already be playing
+          }
         });
         setSessionUnsubscribe(() => unsubscribe);
       } else {
@@ -4161,9 +4178,23 @@ function AppContent() {
           
           <div className="menu-buttons">
             {userRole === 'teacher' && (
-              <button 
-                className="mode-button teacher" 
-                onClick={() => setGameMode('teacherLobby')}
+              <button
+                className="mode-button teacher"
+                onClick={() => {
+                  // Reset the teacher's local round state (score/timer/answer/
+                  // feedback) but deliberately keep sessionCode/sessionData/
+                  // sessionUnsubscribe alive - "New Battle" reuses the same
+                  // classroom session so already-connected students don't have
+                  // to re-enter the code. startSession() (called from the
+                  // lobby's "Start battle!") resets each student's score for
+                  // the new round server-side.
+                  setGameActive(false);
+                  setScore({ correct: 0, total: 0 });
+                  setTimeLeft(60);
+                  setUserAnswer('');
+                  setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+                  setGameMode('teacherLobby');
+                }}
               >
                 <RefreshIcon className="btn-icon" /> New Battle
               </button>
