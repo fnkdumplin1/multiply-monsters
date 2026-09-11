@@ -445,7 +445,7 @@ function AppContent() {
   const [isCreating, setIsCreating] = useState(false);
   const [inputCode, setInputCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
-  const [gameStartTime, setGameStartTime] = useState(null);
+  const [, setGameStartTime] = useState(null);
   const questionTimeoutRef = useRef(null);
 
   // Teacher Portal: tracks the currently active play attempt so its duration/score
@@ -455,13 +455,13 @@ function AppContent() {
   const sessionLoggedRef = useRef(true); // true = nothing pending to log
 
   // Squad Battle states
-  const [isSquadBattle, setIsSquadBattle] = useState(false);
+  const [, setIsSquadBattle] = useState(false);
   const [squadCode, setSquadCode] = useState('');
   const [squadData, setSquadData] = useState(null);
-  const [squadBattleType, setSquadBattleType] = useState('quickClash'); // 'quickClash', 'epicDuel', 'survival'
+  const [, setSquadBattleType] = useState('quickClash'); // 'quickClash', 'epicDuel', 'survival'
   const [isSquadHost, setIsSquadHost] = useState(false);
   const [squadUnsubscribe, setSquadUnsubscribe] = useState(null);
-  const [playersReady, setPlayersReady] = useState(new Set());
+  const [, setPlayersReady] = useState(new Set());
   const [isPlayerReady, setIsPlayerReady] = useState(false);
   const [squadInputCode, setSquadInputCode] = useState('');
   const [isJoiningSquad, setIsJoiningSquad] = useState(false);
@@ -1630,8 +1630,6 @@ function AppContent() {
     const b = currentQuestion.b;
 
     // Extract digits from a and b
-    const a1 = Math.floor(a / 10); // tens digit of a
-    const a0 = a % 10; // ones digit of a
     const b1 = Math.floor(b / 10); // tens digit of b
     const b0 = b % 10; // ones digit of b
 
@@ -1639,11 +1637,6 @@ function AppContent() {
     const partialProduct1 = a * b0; // First row (multiply by ones digit of b)
     const partialProduct2 = a * b1 * 10; // Second row (multiply by tens digit of b, shifted)
     const finalProduct = a * b;
-
-    // Convert to digit strings for comparison
-    const pp1String = partialProduct1.toString().padStart(4, '0');
-    const pp2String = partialProduct2.toString().padStart(4, '0');
-    const sumString = finalProduct.toString().padStart(4, '0');
 
     // Get user's answers
     const userRow1 = (twoDigitWork.row1.thousands || '0') + (twoDigitWork.row1.hundreds || '0') + (twoDigitWork.row1.tens || '0') + (twoDigitWork.row1.ones || '0');
@@ -3122,12 +3115,6 @@ function AppContent() {
       setGameMode('menu');
     };
 
-    // Calculate time left based on battle type
-    const getTimeLimit = () => {
-      if (squadData?.battleType === 'quickClash') return 180; // 3 minutes
-      return 180; // default
-    };
-
     const getBattleTypeDisplay = () => {
       switch (squadData?.battleType) {
         case 'quickClash': return { name: 'Quick Clash', emoji: '⚡' };
@@ -3883,7 +3870,6 @@ function AppContent() {
       const success = await startSession(sessionCode);
       if (success && sessionData) {
         console.log('🍎 Teacher started the game! Switching to monitor view...');
-        const selectedMode = sessionData.gameMode || 'timed';
         // Timer will be calculated from server timestamp in useEffect
         setGameActive(true); // Start timer countdown
         setGameMode('teacherMonitor'); // Teacher doesn't play, just monitors
