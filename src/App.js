@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
+import { PixelIcon, PIXEL_ICONS } from './PixelIcons';
 import {
   createSession,
   joinSession,
@@ -35,22 +36,13 @@ import { ReactComponent as ArrowLeftIcon } from './icons/arrow-left.svg';
 import { ReactComponent as ArrowRightIcon } from './icons/arrow-right.svg';
 import { ReactComponent as RocketIcon } from './icons/rocket.svg';
 import { ReactComponent as TeacherIcon } from './icons/teacher.svg';
-import { ReactComponent as DownloadIcon } from './icons/download.svg';
-import { ReactComponent as PlusCircleIcon } from './icons/plus-circle.svg';
-import { ReactComponent as BackpackIcon } from './icons/backpack.svg';
 import { ReactComponent as BoltIcon } from './icons/bolt.svg';
-import { ReactComponent as ShieldIcon } from './icons/shield.svg';
-import { ReactComponent as SkullIcon } from './icons/skull.svg';
 import { ReactComponent as CheckIcon } from './icons/check.svg';
-import { ReactComponent as HourglassIcon } from './icons/hourglass.svg';
-import { ReactComponent as TrophyIcon } from './icons/trophy.svg';
 import { ReactComponent as RefreshIcon } from './icons/refresh.svg';
 import { ReactComponent as TrashIcon } from './icons/trash.svg';
 import { ReactComponent as CloseIcon } from './icons/close.svg';
 import { ReactComponent as QuestionMarkCircleIcon } from './icons/question-mark-circle.svg';
 import { ReactComponent as SearchIcon } from './icons/search.svg';
-import { ReactComponent as StopIcon } from './icons/stop.svg';
-import { ReactComponent as ChartIcon } from './icons/chart.svg';
 import { ReactComponent as MessageIcon } from './icons/message.svg';
 
 // Map URL paths to game modes
@@ -119,6 +111,58 @@ const BACKGROUND_MUSIC_TRACKS = [
   '/background-audio-03.mp3'
 ];
 
+// Taunts the training-mode monster fires back when the laser misses.
+const MONSTER_TAUNTS = [
+  'HA! TOO SLOW!',
+  'MY GRANDMA MATHS FASTER!',
+  'NICE TRY, TINY HUMAN!',
+  'IS THAT YOUR FINAL ANSWER?',
+  'MISSED ME, MISSED ME!',
+  'CALCULATE FASTER, ROOKIE!',
+  'BEEP BOOP, WRONG!',
+  'I AM UNTOUCHABLE!',
+];
+
+// Battle-arena monster sprites - one is picked at random for each new
+// training-mode question so the same monster isn't fought every round.
+const BATTLE_MONSTER_ICON_KEYS = ['monster', 'monsterTentacle', 'monsterHorned', 'monsterBigEye'];
+
+// Neon palette a battle-arena monster's color is drawn from, alongside its sprite.
+const BATTLE_MONSTER_COLORS = [
+  '--arcade-neon-green',
+  '--arcade-neon-cyan',
+  '--arcade-neon-pink',
+  '--arcade-neon-purple',
+  '--arcade-neon-orange',
+  '--arcade-neon-yellow',
+];
+
+// One-word post-answer feedback, shown in place of the older themed,
+// name-addressed phrases so it stays consistent with the arcade look
+// regardless of game mode.
+const CORRECT_FEEDBACK_WORDS = [
+  'DESTROYED!',
+  'OBLITERATED!',
+  'ANNIHILATED!',
+  'DEMOLISHED!',
+  'CRUSHED!',
+  'ELIMINATED!',
+  'VAPORIZED!',
+  'PULVERIZED!',
+  'SMASHED!',
+  'ZAPPED!',
+];
+const INCORRECT_FEEDBACK_WORDS = [
+  'MISSED!',
+  'DODGED!',
+  'BLOCKED!',
+  'DEFLECTED!',
+  'ESCAPED!',
+  'EVADED!',
+  'SURVIVED!',
+  'RESISTED!',
+];
+
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -162,6 +206,23 @@ function AppContent() {
       setGameModeInternal(mode);
     }
   }, [location.pathname, gameMode]);
+
+  // Training mode swaps the page's own backdrop for the arcade starfield -
+  // toggled on <body> directly so it always covers the full page, even when
+  // .App's own box falls short of the viewport (mobile fill-available quirks).
+  useEffect(() => {
+    document.body.classList.toggle(
+      'training-mode-bg',
+      gameMode === 'unlimited' || gameMode === 'detective' || gameMode === 'twoDigit' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced' ||
+      gameMode === 'results' || gameMode === 'multiplayerResults' || gameMode === 'squadResults' ||
+      gameMode === 'multiplayerSelect' || gameMode === 'createSession' || gameMode === 'joinSession' ||
+      gameMode === 'teacherLobby' || gameMode === 'studentLobby' || gameMode === 'teacherMonitor' ||
+      gameMode === 'squadSelect' || gameMode === 'createSquadBattle' || gameMode === 'joinSquadBattle' ||
+      gameMode === 'squadLobby' || gameMode === 'squadBattle' || gameMode === 'squadSurvival' ||
+      gameMode === 'changelog' || gameMode === 'teacherAuth' || gameMode === 'teacherDashboard'
+    );
+    return () => document.body.classList.remove('training-mode-bg');
+  }, [gameMode]);
 
   // Teacher Portal: live list of registered teachers, for the student "select your teacher" dropdown
   useEffect(() => {
@@ -239,8 +300,21 @@ function AppContent() {
   }, [gameMode, currentTeacher?.uid]);
 
   // App version and changelog
-  const APP_VERSION = 'v4.0.3';
+  const APP_VERSION = 'v5.0.0';
   const CHANGELOG = [
+    {
+      version: 'v5.0.0',
+      date: '09-17-2026',
+      features: [
+        'Full arcade re-skin of Battle Mode and Squad Showdown: dark neon starfield theme replaces the old light "floating monster" design across every ancillary screen (select, create, join, lobby, monitor, results) and live battle arena',
+        'New shared 8-bit pixel-icon system replaces mismatched emoji and stroke icons throughout classroom multiplayer, including rank medals, host/ready badges, and action buttons',
+        'Standardized every button to a translucent, accent-tinted background instead of solid or gradient fills, improving text readability while keeping each button\'s color meaning (create/start, join, danger, back)',
+        'Fixed several icon/text layout bugs introduced by the new pixel-icon system, including inappropriate text wrapping and icons floating above their labels',
+        'Redeployed stale Firestore security rules that had been silently blocking Squad Showdown battle creation for weeks',
+        'Re-skinned the Teacher Guide PDF to match the new arcade theme, including redrawn dark, neon-bordered mockups of every screen it walks through',
+        'Re-skinned this version history screen to match'
+      ]
+    },
     {
       version: 'v4.0.3',
       date: '07-26-2026',
@@ -429,6 +503,10 @@ function AppContent() {
   const [timeLeft, setTimeLeft] = useState(60);
   const [gameActive, setGameActive] = useState(false);
   const [feedback, setFeedback] = useState({ show: false, correct: false, message: '', correctAnswer: 0 });
+  const [battleAnim, setBattleAnim] = useState('idle'); // 'idle' | 'hit' | 'miss' — training mode laser battle
+  const [monsterTaunt, setMonsterTaunt] = useState('');
+  const [battleMonsterIcon, setBattleMonsterIcon] = useState('monster');
+  const [battleMonsterColor, setBattleMonsterColor] = useState(BATTLE_MONSTER_COLORS[0]);
   const [scoreHistory, setScoreHistory] = useState({ timed: [], advanced: [] });
   const [previousGameMode, setPreviousGameMode] = useState('unlimited');
   const [usedQuestions, setUsedQuestions] = useState(new Set());
@@ -483,6 +561,12 @@ function AppContent() {
 
   // Name validation state
   const [nameError, setNameError] = useState('');
+
+  // Arcade title screen: attract-mode loop shown until the player taps/types,
+  // and returned to after a stretch of inactivity (like a real cabinet).
+  const [attractMode, setAttractMode] = useState(true);
+  const [attractScore, setAttractScore] = useState(0);
+  const idleTimerRef = useRef(null);
 
   // Countdown states
   const [countdown, setCountdown] = useState(null);
@@ -640,74 +724,80 @@ function AppContent() {
       }
       
       if (type === 'submit') {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.1);
+        // Chiptune UI confirm - two-step square wave blip
+        [660, 990].forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+
+          oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.045);
+          oscillator.type = 'square';
+
+          gainNode.gain.setValueAtTime(0.08, audioContext.currentTime + index * 0.045);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.045 + 0.06);
+
+          oscillator.start(audioContext.currentTime + index * 0.045);
+          oscillator.stop(audioContext.currentTime + index * 0.045 + 0.06);
+        });
       } else if (type === 'correct') {
         const correctSounds = [
           () => {
-            const notes = [523.25, 659.25, 783.99];
+            // Classic 8-bit "power-up" ascending square arpeggio
+            const notes = [523.25, 659.25, 783.99, 1046.5];
             notes.forEach((freq, index) => {
               const oscillator = audioContext.createOscillator();
               const gainNode = audioContext.createGain();
-              
+
               oscillator.connect(gainNode);
               gainNode.connect(audioContext.destination);
-              
+
               oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
-              oscillator.type = 'sine';
-              
-              gainNode.gain.setValueAtTime(0.15, audioContext.currentTime + index * 0.1);
-              gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.1 + 0.2);
-              
-              oscillator.start(audioContext.currentTime + index * 0.1);
-              oscillator.stop(audioContext.currentTime + index * 0.1 + 0.2);
+              oscillator.type = 'square';
+
+              gainNode.gain.setValueAtTime(0.13, audioContext.currentTime + index * 0.08);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.08 + 0.16);
+
+              oscillator.start(audioContext.currentTime + index * 0.08);
+              oscillator.stop(audioContext.currentTime + index * 0.08 + 0.16);
             });
           },
           () => {
+            // Pulse-wave rising sweep, like a shield/coin pickup
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-            
+
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
-            
+
             oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.3);
-            oscillator.type = 'triangle';
-            
-            gainNode.gain.setValueAtTime(0.12, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-            
+            oscillator.frequency.exponentialRampToValueAtTime(1046.5, audioContext.currentTime + 0.22);
+            oscillator.type = 'square';
+
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
+
             oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.3);
+            oscillator.stop(audioContext.currentTime + 0.25);
           },
           () => {
-            [587.33, 698.46, 783.99, 880].forEach((freq, index) => {
+            // Chunky 8-bit victory fanfare
+            [587.33, 698.46, 783.99, 987.77].forEach((freq, index) => {
               const oscillator = audioContext.createOscillator();
               const gainNode = audioContext.createGain();
-              
+
               oscillator.connect(gainNode);
               gainNode.connect(audioContext.destination);
-              
+
               oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
-              oscillator.type = 'sine';
-              
-              gainNode.gain.setValueAtTime(0.1, audioContext.currentTime + index * 0.08);
-              gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.08 + 0.15);
-              
-              oscillator.start(audioContext.currentTime + index * 0.08);
-              oscillator.stop(audioContext.currentTime + index * 0.08 + 0.15);
+              oscillator.type = 'square';
+
+              gainNode.gain.setValueAtTime(0.1, audioContext.currentTime + index * 0.07);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.07 + 0.13);
+
+              oscillator.start(audioContext.currentTime + index * 0.07);
+              oscillator.stop(audioContext.currentTime + index * 0.07 + 0.13);
             });
           }
         ];
@@ -734,19 +824,20 @@ function AppContent() {
             oscillator.stop(audioContext.currentTime + 0.3);
           },
           () => {
+            // Descending 8-bit "fail" arpeggio
             [262, 233, 208].forEach((freq, index) => {
               const oscillator = audioContext.createOscillator();
               const gainNode = audioContext.createGain();
-              
+
               oscillator.connect(gainNode);
               gainNode.connect(audioContext.destination);
-              
+
               oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
-              oscillator.type = 'triangle';
-              
-              gainNode.gain.setValueAtTime(0.08, audioContext.currentTime + index * 0.12);
+              oscillator.type = 'square';
+
+              gainNode.gain.setValueAtTime(0.07, audioContext.currentTime + index * 0.12);
               gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.12 + 0.2);
-              
+
               oscillator.start(audioContext.currentTime + index * 0.12);
               oscillator.stop(audioContext.currentTime + index * 0.12 + 0.2);
             });
@@ -861,6 +952,68 @@ function AppContent() {
         
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.5);
+      } else if (type === 'coin') {
+        // Classic arcade "coin drop" chime - two quick bright square-wave notes
+        [988, 1319].forEach((freq, index) => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+
+          oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.09);
+          oscillator.type = 'square';
+
+          gainNode.gain.setValueAtTime(0.12, audioContext.currentTime + index * 0.09);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.09 + 0.22);
+
+          oscillator.start(audioContext.currentTime + index * 0.09);
+          oscillator.stop(audioContext.currentTime + index * 0.09 + 0.22);
+        });
+      } else if (type === 'blip') {
+        // Menu-navigation blip - short arpeggiated square wave
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(660, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime + 0.04);
+        oscillator.type = 'square';
+
+        gainNode.gain.setValueAtTime(0.07, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.09);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.09);
+      } else if (type === 'laser') {
+        // Ray-gun blaster zap - layered descending sawtooth + square for a thicker punch
+        const now = audioContext.currentTime;
+
+        const zap = audioContext.createOscillator();
+        const zapGain = audioContext.createGain();
+        zap.connect(zapGain);
+        zapGain.connect(audioContext.destination);
+        zap.type = 'sawtooth';
+        zap.frequency.setValueAtTime(2200, now);
+        zap.frequency.exponentialRampToValueAtTime(180, now + 0.18);
+        zapGain.gain.setValueAtTime(0.11, now);
+        zapGain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        zap.start(now);
+        zap.stop(now + 0.2);
+
+        const punch = audioContext.createOscillator();
+        const punchGain = audioContext.createGain();
+        punch.connect(punchGain);
+        punchGain.connect(audioContext.destination);
+        punch.type = 'square';
+        punch.frequency.setValueAtTime(900, now);
+        punch.frequency.exponentialRampToValueAtTime(120, now + 0.12);
+        punchGain.gain.setValueAtTime(0.07, now);
+        punchGain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+        punch.start(now);
+        punch.stop(now + 0.14);
       }
     } catch (error) {
       console.log('Audio not supported or blocked');
@@ -1060,6 +1213,8 @@ function AppContent() {
 
     // Clear previous inputs and prefilled state
     setDetectiveInput({ factor1: '', factor2: '' });
+    setBattleMonsterIcon(BATTLE_MONSTER_ICON_KEYS[Math.floor(Math.random() * BATTLE_MONSTER_ICON_KEYS.length)]);
+    setBattleMonsterColor(BATTLE_MONSTER_COLORS[Math.floor(Math.random() * BATTLE_MONSTER_COLORS.length)]);
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
 
     // Helper function for better randomization (0-12 range)
@@ -1313,6 +1468,8 @@ function AppContent() {
     }
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
     setUserAnswer(''); // Ensure answer state is cleared for new question
+    setBattleMonsterIcon(BATTLE_MONSTER_ICON_KEYS[Math.floor(Math.random() * BATTLE_MONSTER_ICON_KEYS.length)]);
+    setBattleMonsterColor(BATTLE_MONSTER_COLORS[Math.floor(Math.random() * BATTLE_MONSTER_COLORS.length)]);
 
     // Clear and focus the answer input when new question appears (for mobile gameplay speed)
     setTimeout(() => {
@@ -1342,6 +1499,8 @@ function AppContent() {
     console.log(`✅ New division question: ${product} ÷ ${factor1} = ? for ${userName}`);
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
     setUserAnswer('');
+    setBattleMonsterIcon(BATTLE_MONSTER_ICON_KEYS[Math.floor(Math.random() * BATTLE_MONSTER_ICON_KEYS.length)]);
+    setBattleMonsterColor(BATTLE_MONSTER_COLORS[Math.floor(Math.random() * BATTLE_MONSTER_COLORS.length)]);
 
     setTimeout(() => {
       if (answerInputRef.current && gameActive) {
@@ -1434,6 +1593,37 @@ function AppContent() {
     }
   };
 
+  // Resets the "return to attract mode" idle timer. Real cabinets fall back
+  // to their demo loop after a while if nobody plays - mirrors that here.
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => setAttractMode(true), 45000);
+  }, []);
+
+  const dismissAttractMode = () => {
+    if (!attractMode) return;
+    initializeAudio();
+    playSound('coin');
+    setAttractMode(false);
+    resetIdleTimer();
+  };
+
+  useEffect(() => {
+    if (gameMode !== 'nameInput') return undefined;
+    resetIdleTimer();
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [gameMode, resetIdleTimer]);
+
+  useEffect(() => {
+    if (gameMode !== 'nameInput' || !attractMode) return undefined;
+    const id = setInterval(() => {
+      setAttractScore((s) => s + (Math.floor(Math.random() * 5) + 1) * 10);
+    }, 350);
+    return () => clearInterval(id);
+  }, [gameMode, attractMode]);
+
   // Teacher Portal: call at the start of any loggable mode (solo or squad)
   const beginUsageTracking = useCallback((mode) => {
     sessionStartTimeRef.current = Date.now();
@@ -1491,6 +1681,13 @@ function AppContent() {
     setScore({ correct: 0, total: 0 });
     setUsedQuestions(new Set()); // Clear used questions for new session
     setGameActive(true);
+    // A prior round can end mid-animation (e.g. quitting right after a miss,
+    // before its auto-clear timeout fires), leaving battleAnim as 'hit'/'miss'.
+    // The battle arena unmounts/remounts between games, so without this reset
+    // it would mount already carrying that class and immediately replay the
+    // laser-fire/miss animation - looking like an unprompted incorrect shot.
+    setBattleAnim('idle');
+    setMonsterTaunt('');
     beginUsageTracking('unlimited');
     generateQuestion();
     startBackgroundMusic();
@@ -1511,6 +1708,11 @@ function AppContent() {
     // Start countdown, then actual game
     startCountdown(() => {
       setGameActive(true);
+      // See startUnlimited(): reset leftover battle-arena state from a round
+      // that ended mid-animation, so the arena doesn't remount already primed
+      // to replay a laser-fire/miss on the very first question.
+      setBattleAnim('idle');
+      setMonsterTaunt('');
       if (!isMultiplayer) {
         beginUsageTracking('timed');
       }
@@ -1536,6 +1738,11 @@ function AppContent() {
     // Start countdown, then actual game
     startCountdown(() => {
       setGameActive(true);
+      // See startUnlimited(): reset leftover battle-arena state from a round
+      // that ended mid-animation, so the arena doesn't remount already primed
+      // to replay a laser-fire/miss on the very first question.
+      setBattleAnim('idle');
+      setMonsterTaunt('');
       if (!isMultiplayer) {
         beginUsageTracking('advanced');
       }
@@ -1556,6 +1763,11 @@ function AppContent() {
     setDetectiveQuestionCount(1); // Start with question 1
     setUsedQuestions(new Set()); // Clear used questions for new session
     setGameActive(true);
+    // See startUnlimited(): reset leftover battle-arena state from a round
+    // that ended mid-animation, so the arena doesn't remount already primed
+    // to replay a laser-fire/miss on the very first question.
+    setBattleAnim('idle');
+    setMonsterTaunt('');
     beginUsageTracking('detective');
     generateDetectiveClue();
     startBackgroundMusic();
@@ -1571,6 +1783,11 @@ function AppContent() {
     setTwoDigitQuestionCount(1); // Start with question 1
     setUsedQuestions(new Set()); // Clear used questions for new session
     setGameActive(true);
+    // See startUnlimited(): reset leftover battle-arena state from a round
+    // that ended mid-animation, so the arena doesn't remount already primed
+    // to replay a laser-fire/miss on the very first question.
+    setBattleAnim('idle');
+    setMonsterTaunt('');
     beginUsageTracking('twoDigit');
     generateTwoDigitQuestion();
     startBackgroundMusic();
@@ -1585,6 +1802,11 @@ function AppContent() {
     setScore({ correct: 0, total: 0 });
     setUsedQuestions(new Set());
     setGameActive(true);
+    // See startUnlimited(): reset leftover battle-arena state from a round
+    // that ended mid-animation, so the arena doesn't remount already primed
+    // to replay a laser-fire/miss on the very first question.
+    setBattleAnim('idle');
+    setMonsterTaunt('');
     beginUsageTracking('division');
     generateDivisionQuestion();
     startBackgroundMusic();
@@ -1611,6 +1833,8 @@ function AppContent() {
     console.log(`✅ New two-digit question: ${a} × ${b} = ?`);
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
     setUserAnswer(''); // Clear answer state
+    setBattleMonsterIcon(BATTLE_MONSTER_ICON_KEYS[Math.floor(Math.random() * BATTLE_MONSTER_ICON_KEYS.length)]);
+    setBattleMonsterColor(BATTLE_MONSTER_COLORS[Math.floor(Math.random() * BATTLE_MONSTER_COLORS.length)]);
 
     // Reset work state
     setTwoDigitWork({
@@ -1658,21 +1882,18 @@ function AppContent() {
     }));
 
     setTimeout(() => {
+      playSound('laser');
+      const impactDelay = 300;
       if (isCorrect) {
-        playSound('correct');
-        const encouragingMessages = [
-          `👾 Monster defeated, ${userName}!`,
-          `🎃 Spook-tacular work, ${userName}!`,
-          `🦄 Magical math powers, ${userName}!`,
-          `🐲 Dragon slayer, ${userName}!`,
-          `🚀 Rocket monster, ${userName}!`
-        ];
-        const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
+        setTimeout(() => playSound('correct'), impactDelay);
+        const randomMessage = CORRECT_FEEDBACK_WORDS[Math.floor(Math.random() * CORRECT_FEEDBACK_WORDS.length)];
         setFeedback({ show: true, correct: true, message: randomMessage, correctAnswer: finalProduct });
+        setBattleAnim('hit');
 
         // Auto-advance on correct answer
         setTimeout(() => {
           setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+          setBattleAnim('idle');
           if (gameActive) {
             if (twoDigitQuestionCount < twoDigitMaxQuestions) {
               setTwoDigitQuestionCount(prev => prev + 1);
@@ -1683,12 +1904,14 @@ function AppContent() {
           }
         }, 1500);
       } else {
-        playSound('incorrect');
+        setTimeout(() => playSound('incorrect'), impactDelay);
         let errorMessage = '🤔 Check your work! ';
         if (!row1Correct) errorMessage += `First row should be ${partialProduct1}. `;
         if (!row2Correct) errorMessage += `Second row should be ${partialProduct2}. `;
         if (!sumCorrect) errorMessage += `Sum should be ${finalProduct}.`;
         setFeedback({ show: true, correct: false, message: errorMessage, correctAnswer: finalProduct });
+        setMonsterTaunt(MONSTER_TAUNTS[Math.floor(Math.random() * MONSTER_TAUNTS.length)]);
+        setBattleAnim('miss');
         // Don't auto-advance on wrong answer - user chooses
       }
     }, 150);
@@ -1702,6 +1925,7 @@ function AppContent() {
 
   const moveToNextTwoDigitQuestion = () => {
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    setBattleAnim('idle');
     if (gameActive) {
       if (twoDigitQuestionCount < twoDigitMaxQuestions) {
         setTwoDigitQuestionCount(prev => prev + 1);
@@ -1714,6 +1938,7 @@ function AppContent() {
 
   const retryTwoDigitQuestion = () => {
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    setBattleAnim('idle');
   };
 
   const submitDetectiveAnswer = () => {
@@ -1802,26 +2027,18 @@ function AppContent() {
     }));
 
     setTimeout(() => {
+      playSound('laser');
+      const impactDelay = 300;
       if (isCorrect) {
-        playSound('correct');
-        const detectiveMessages = [
-          `🕵️ Case solved, Detective ${userName}!`,
-          `🔍 Brilliant deduction, ${userName}!`,
-          `🎯 Mystery cracked, Detective ${userName}!`,
-          `⚡ Sharp investigation, ${userName}!`,
-          `🏆 Master detective work, ${userName}!`,
-          `🧠 Clever reasoning, Detective ${userName}!`,
-          `✨ Outstanding detective, ${userName}!`,
-          `🎉 Another case closed, ${userName}!`,
-          `🌟 Superb sleuthing, Detective ${userName}!`,
-          `🚀 Detective genius, ${userName}!`
-        ];
-        const randomMessage = detectiveMessages[Math.floor(Math.random() * detectiveMessages.length)];
+        setTimeout(() => playSound('correct'), impactDelay);
+        const randomMessage = CORRECT_FEEDBACK_WORDS[Math.floor(Math.random() * CORRECT_FEEDBACK_WORDS.length)];
         setFeedback({ show: true, correct: true, message: randomMessage, correctAnswer: correctAnswerText });
+        setBattleAnim('hit');
 
         // Auto-advance to next question after correct answer
         setTimeout(() => {
           setFeedback({ show: false, correct: false, message: '', correctAnswer: '' });
+          setBattleAnim('idle');
           if (gameActive) {
             if (detectiveQuestionCount >= detectiveMaxQuestions) {
               endGame();
@@ -1832,19 +2049,11 @@ function AppContent() {
           }
         }, 1500);
       } else {
-        playSound('incorrect');
-        const helpfulMessages = [
-          '🤔 This clue needs more investigation!',
-          '🔍 Check your detective work again!',
-          '💭 Good attempt, keep investigating!',
-          '🎯 The mystery continues!',
-          '💡 Try a different angle, detective!',
-          '🧐 This case is tricky!',
-          '⚡ Keep those detective skills sharp!',
-          '🌱 Every detective learns from each case!'
-        ];
-        const randomMessage = helpfulMessages[Math.floor(Math.random() * helpfulMessages.length)];
+        setTimeout(() => playSound('incorrect'), impactDelay);
+        const randomMessage = INCORRECT_FEEDBACK_WORDS[Math.floor(Math.random() * INCORRECT_FEEDBACK_WORDS.length)];
         setFeedback({ show: true, correct: false, message: randomMessage, correctAnswer: correctAnswerText });
+        setMonsterTaunt(MONSTER_TAUNTS[Math.floor(Math.random() * MONSTER_TAUNTS.length)]);
+        setBattleAnim('miss');
         // For wrong answers, don't auto-advance - user must click "Next Question"
       }
     }, 150);
@@ -1855,6 +2064,7 @@ function AppContent() {
 
   const moveToNextDetectiveQuestion = () => {
     setFeedback({ show: false, correct: false, message: '', correctAnswer: '' });
+    setBattleAnim('idle');
     if (gameActive) {
       if (detectiveQuestionCount >= detectiveMaxQuestions) {
         endGame();
@@ -1870,6 +2080,7 @@ function AppContent() {
 
     // Clear any existing feedback immediately when submitting new answer
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    setBattleAnim('idle');
 
     initializeAudio(); // Initialize audio on interaction
     playSound('submit');
@@ -1927,59 +2138,27 @@ function AppContent() {
     // second timeout inside the first one's callback guarantees the message
     // is fully shown for feedbackDuration before anything changes underneath it.
     questionTimeoutRef.current = setTimeout(() => {
+      if (gameMode === 'unlimited' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced') {
+        playSound('laser');
+      }
+      const impactDelay = (gameMode === 'unlimited' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced') ? 300 : 0;
       if (isCorrect) {
-        playSound('correct');
-        const encouragingMessages = [
-          `👾 Monster defeated, ${userName}!`,
-          `🎃 Spook-tacular work, ${userName}!`,
-          `🦄 Magical math powers, ${userName}!`,
-          `🐲 Dragon slayer, ${userName}!`,
-          `🚀 Rocket monster, ${userName}!`,
-          `🏆 Math monster champion, ${userName}!`,
-          `🔥 Blazing monster hunter, ${userName}!`,
-          `⚡ Lightning monster, ${userName}!`,
-          `🌈 Rainbow monster master, ${userName}!`,
-          `💪 Strong monster warrior, ${userName}!`,
-          `🤩 Super monster hero, ${userName}!`,
-          `🎯 Monster targeting expert, ${userName}!`,
-          `🎆 Fireworks monster, ${userName}!`,
-          `😎 Cool monster tamer, ${userName}!`,
-          `👍 Monster approved, ${userName}!`,
-          `🌟 Stellar monster fighter, ${userName}!`,
-          `🔍 Sharp-eyed monster hunter, ${userName}!`,
-          `🎨 Artistic monster creator, ${userName}!`,
-          `💡 Bright monster genius, ${userName}!`,
-          `🎓 Monster math scholar, ${userName}!`,
-          `🚀 Speedy monster racer, ${userName}!`,
-          `✨ Enchanted monster mage, ${userName}!`,
-          `🎉 Party monster, ${userName}!`,
-          `🏅 Monster championship winner, ${userName}!`,
-          `🔥 Hot monster streak, ${userName}!`,
-          `👹 Boss monster conquered, ${userName}!`,
-          `🤖 Robot monster ally, ${userName}!`,
-          `🐙 Tentacle monster friend, ${userName}!`
-        ];
-        const randomMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
+        setTimeout(() => playSound('correct'), impactDelay);
+        const randomMessage = CORRECT_FEEDBACK_WORDS[Math.floor(Math.random() * CORRECT_FEEDBACK_WORDS.length)];
         setFeedback({ show: true, correct: true, message: randomMessage, correctAnswer });
+        setBattleAnim('hit');
       } else {
-        playSound('incorrect');
-        const helpfulMessages = [
-          '🤔 Monster escaped this time!',
-          '💭 Nice attempt, monster trainer!',
-          '🎯 Almost caught that monster!',
-          '🌱 Growing stronger against monsters!',
-          '💪 Training with monsters is tough!',
-          '👾 The monster was tricky!',
-          '🎃 Spooky math challenge!',
-          '🐙 That monster was sneaky!'
-        ];
-        const randomMessage = helpfulMessages[Math.floor(Math.random() * helpfulMessages.length)];
+        setTimeout(() => playSound('incorrect'), impactDelay);
+        const randomMessage = INCORRECT_FEEDBACK_WORDS[Math.floor(Math.random() * INCORRECT_FEEDBACK_WORDS.length)];
         setFeedback({ show: true, correct: false, message: randomMessage, correctAnswer });
+        setMonsterTaunt(MONSTER_TAUNTS[Math.floor(Math.random() * MONSTER_TAUNTS.length)]);
+        setBattleAnim('miss');
       }
 
       questionTimeoutRef.current = setTimeout(() => {
         // Always clear feedback regardless of game state
         setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+        setBattleAnim('idle');
 
         // Only generate new question if game is still active
         if (gameActive) {
@@ -2007,6 +2186,14 @@ function AppContent() {
   const endGame = useCallback(() => {
     playSound('click');
     stopBackgroundMusic();
+
+    try {
+      const gameOverAudio = new Audio(process.env.PUBLIC_URL + '/game-over.mp3');
+      gameOverAudio.volume = 0.5;
+      gameOverAudio.play().catch(() => {});
+    } catch (error) {
+      console.log('Game-over audio not supported or blocked');
+    }
 
     setGameActive(false);
 
@@ -2246,66 +2433,97 @@ function AppContent() {
 
   if (gameMode === 'nameInput') {
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
-          <h1>Multiply Monsters</h1>
-          <p>Welcome to the monster math kingdom! Let's multiply with monsters!</p>
-          <div className="name-input-container">
-            <label htmlFor="name-input">What's your name?</label>
-            <div className="name-guidelines">
-              <p>Enter your first and last name so your teacher can identify you</p>
-            </div>
-            <input
-              id="name-input"
-              type="text"
-              value={userName}
-              onChange={(e) => {
-                setUserName(e.target.value);
-                if (nameError) setNameError(''); // Clear error when user starts typing
-              }}
-              onKeyPress={handleNameKeyPress}
-              className="name-input"
-              placeholder="First Last"
-              autoFocus
-              maxLength={30}
-            />
-            <div className="teacher-select-container">
-              <label htmlFor="teacher-select">Who's your teacher? (optional)</label>
-              <select
-                id="teacher-select"
-                value={teacherId}
-                onChange={(e) => setTeacherId(e.target.value)}
-                className="teacher-select"
+      <div className="App arcade-theme">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="crt-frame crt-frame--wide">
+          <div className="crt-screen">
+            {attractMode ? (
+              <div
+                className="attract-mode"
+                onClick={dismissAttractMode}
+                onKeyDown={dismissAttractMode}
+                role="button"
+                tabIndex={0}
+                aria-label="Tap to start Multiply Monsters"
               >
-                <option value="">No teacher / just practicing</option>
-                {teacherList.map((teacher) => (
-                  <option key={teacher.id} value={teacher.id}>
-                    {teacher.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {nameError && (
-              <div className="name-error">
-                ❌ {nameError}
+                <div className="attract-marquee">- HIGH SCORE CHALLENGE -</div>
+                <div className="attract-vs" aria-hidden="true">
+                  <span className="attract-monster">
+                    <PixelIcon bitmap={PIXEL_ICONS.monster} className="pixel-icon" />
+                  </span>
+                  <span className="attract-vs-text">VS</span>
+                  <span className="attract-monster attract-monster--right">
+                    <PixelIcon bitmap={PIXEL_ICONS.skull} className="pixel-icon" />
+                  </span>
+                </div>
+                <div className="attract-title">MULTIPLY<br />MONSTERS</div>
+                <div className="attract-score">{attractScore.toLocaleString()}</div>
+                <div className="insert-coin-prompt">INSERT COIN TO PLAY</div>
+                <div className="attract-tap-hint">(tap anywhere to start)</div>
+              </div>
+            ) : (
+              <div className="menu-container arcade">
+                <div className="arcade-marquee">MULTIPLY<br />MONSTERS</div>
+                <p className="arcade-subtitle">Enter your name to begin the quest!</p>
+                <div className="name-input-container">
+                  <label htmlFor="name-input">What's your name?</label>
+                  <div className="name-guidelines">
+                    <p>Enter your first and last name so your teacher can identify you</p>
+                  </div>
+                  <input
+                    id="name-input"
+                    type="text"
+                    value={userName}
+                    onChange={(e) => {
+                      setUserName(e.target.value);
+                      if (nameError) setNameError(''); // Clear error when user starts typing
+                      resetIdleTimer();
+                    }}
+                    onKeyPress={handleNameKeyPress}
+                    className="name-input"
+                    placeholder="First Last"
+                    autoFocus
+                    maxLength={30}
+                  />
+                  <div className="teacher-select-container">
+                    <label htmlFor="teacher-select">Who's your teacher? (optional)</label>
+                    <select
+                      id="teacher-select"
+                      value={teacherId}
+                      onChange={(e) => { setTeacherId(e.target.value); resetIdleTimer(); }}
+                      className="teacher-select"
+                    >
+                      <option value="">No teacher / just practicing</option>
+                      {teacherList.map((teacher) => (
+                        <option key={teacher.id} value={teacher.id}>
+                          {teacher.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {nameError && (
+                    <div className="name-error">
+                      ❌ {nameError}
+                    </div>
+                  )}
+                  <button
+                    onClick={handleNameSubmit}
+                    className="submit-button enter-kingdom-button"
+                    disabled={!userName.trim()}
+                  >
+                    <RocketIcon className="btn-icon" /> Enter the monster kingdom!
+                  </button>
+                </div>
+                <div className="version-footer">
+                  <button className="version-link" onClick={() => setGameMode('teacherAuth')}>
+                    <TeacherIcon className="btn-icon" /> Teacher Portal
+                  </button>
+                </div>
               </div>
             )}
-            <button
-              onClick={handleNameSubmit}
-              className="submit-button enter-kingdom-button"
-              disabled={!userName.trim()}
-            >
-              <RocketIcon className="btn-icon" /> Enter the monster kingdom!
-            </button>
-          </div>
-          <div className="version-footer">
-            <button className="version-link" onClick={() => setGameMode('teacherAuth')}>
-              <TeacherIcon className="btn-icon" /> Teacher Portal
-            </button>
           </div>
         </div>
       </div>
@@ -2314,134 +2532,150 @@ function AppContent() {
 
   if (gameMode === 'menu') {
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
-          <h1>Multiply Monsters</h1>
-          <p>Hi {userName}! Choose your adventure!</p>
-          
-          <div className="game-modes-grid">
-            <div className="mode-section">
-              <h3 className="section-title">Solo Adventures</h3>
-              <div className="mode-cards">
-                <button className="mode-card training" onClick={startUnlimited}>
-                  <div className="card-icon">🐉</div>
-                  <div className="card-content">
-                    <h4>Training</h4>
-                    <p>Practice basics</p>
-                  </div>
-                </button>
+      <div className="App arcade-theme">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="crt-frame crt-frame--wide">
+          <div className="crt-screen">
+            <div className="menu-container arcade stage-select">
+              <div className="menu-logo" aria-hidden="true">
+                <span className="menu-logo-monster">
+                  <PixelIcon bitmap={PIXEL_ICONS.monster} className="pixel-icon" />
+                </span>
+                <span className="menu-logo-title">MULTIPLY<br />MONSTERS</span>
+                <span className="menu-logo-monster menu-logo-monster--right">
+                  <PixelIcon bitmap={PIXEL_ICONS.skull} className="pixel-icon" />
+                </span>
+              </div>
+              <div className="stage-select-header">
+                <span className="player-tag">PLAYER 1</span>
+                <span className="arcade-marquee small">{userName}</span>
+              </div>
+              <p className="arcade-subtitle">SELECT YOUR GAME MODE</p>
 
-                <button className="mode-card detective" onClick={startDetective}>
-                  <div className="card-icon">🕵️</div>
-                  <div className="card-content">
-                    <h4>Detective</h4>
-                    <p>Solve mysteries</p>
-                  </div>
-                </button>
+              <div className="game-modes-grid">
+                <div className="mode-section">
+                  <h3 className="section-title">Solo Adventures</h3>
+                  <div className="mode-cards">
+                    <button className="mode-card training" onClick={startUnlimited} onMouseEnter={() => playSound('blip')}>
+                      <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.monster} className="pixel-icon" /></div>
+                      <div className="card-content">
+                        <h4>Training</h4>
+                        <p>Practice basics</p>
+                      </div>
+                    </button>
 
-                <button className="mode-card twodigit" onClick={startTwoDigit}>
-                  <div className="card-icon">🔢</div>
-                  <div className="card-content">
-                    <h4>Two-Digit</h4>
-                    <p>10 questions</p>
-                  </div>
-                </button>
+                    <button className="mode-card detective" onClick={startDetective} onMouseEnter={() => playSound('blip')}>
+                      <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.magnifier} className="pixel-icon" /></div>
+                      <div className="card-content">
+                        <h4>Detective</h4>
+                        <p>Solve mysteries</p>
+                      </div>
+                    </button>
 
-                <button className="mode-card division" onClick={startDivision}>
-                  <div className="card-icon">➗</div>
-                  <div className="card-content">
-                    <h4>Division</h4>
-                    <p>Practice division</p>
+                    <button className="mode-card twodigit" onClick={startTwoDigit} onMouseEnter={() => playSound('blip')}>
+                      <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.multiply} className="pixel-icon" /></div>
+                      <div className="card-content">
+                        <h4>Two-Digit</h4>
+                        <p>10 questions</p>
+                      </div>
+                    </button>
+
+                    <button className="mode-card division" onClick={startDivision} onMouseEnter={() => playSound('blip')}>
+                      <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.divide} className="pixel-icon" /></div>
+                      <div className="card-content">
+                        <h4>Division</h4>
+                        <p>Practice division</p>
+                      </div>
+                    </button>
                   </div>
+                </div>
+
+                <div className="mode-section">
+                  <h3 className="section-title">Timed Challenges</h3>
+                  <div className="division-toggle">
+                    <label className="toggle-label">
+                      <input type="checkbox" checked={includeDivision}
+                        onChange={(e) => setIncludeDivision(e.target.checked)} />
+                      <span className="toggle-slider"></span>
+                      Include division
+                    </label>
+                  </div>
+                  <div className="mode-cards">
+                    <button className="mode-card timed" onClick={startTimed} onMouseEnter={() => playSound('blip')}>
+                      <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.stopwatch} className="pixel-icon" /></div>
+                      <div className="card-content">
+                        <h4>Monster race</h4>
+                        <p>60-second sprint</p>
+                      </div>
+                    </button>
+
+                    <button className="mode-card advanced" onClick={startAdvanced} onMouseEnter={() => playSound('blip')}>
+                      <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.skull} className="pixel-icon" /></div>
+                      <div className="card-content">
+                        <h4>Boss battle</h4>
+                        <p>Ultimate challenge</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mode-section">
+                  <h3 className="section-title">Classroom</h3>
+                  <div className="mode-cards">
+                    <button className="mode-card multiplayer" onClick={() => setGameMode('multiplayerSelect')} onMouseEnter={() => playSound('blip')}>
+                      <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.shield} className="pixel-icon" /></div>
+                      <div className="card-content">
+                        <h4>Battle mode</h4>
+                        <p>Teacher-led classroom</p>
+                      </div>
+                    </button>
+
+                    <button className="mode-card squad" onClick={() => setGameMode('squadSelect')} onMouseEnter={() => playSound('blip')}>
+                      <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.swords} className="pixel-icon" /></div>
+                      <div className="card-content">
+                        <h4>Squad Showdown</h4>
+                        <p>Battle with friends</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="version-footer">
+                <button className="version-link" onClick={() => setGameMode('nameInput')}>
+                  <HomeIcon className="btn-icon" /> Home
                 </button>
+                <button className="version-link" onClick={() => setGameMode('changelog')}>
+                  {APP_VERSION}
+                </button>
+                <a
+                  className="version-link"
+                  href="./Multiplication Trainer - Battle Mode Teacher Guide.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <TeacherIcon className="btn-icon" /> Teacher Guide
+                </a>
+                <span className="copyright-text">
+                  Copyright {new Date().getFullYear()}, Eric Ellis Design
+                </span>
               </div>
             </div>
-
-            <div className="mode-section">
-              <h3 className="section-title">Timed Challenges</h3>
-              <div className="division-toggle">
-                <label className="toggle-label">
-                  <input type="checkbox" checked={includeDivision}
-                    onChange={(e) => setIncludeDivision(e.target.checked)} />
-                  <span className="toggle-slider"></span>
-                  Include division
-                </label>
-              </div>
-              <div className="mode-cards">
-                <button className="mode-card timed" onClick={startTimed}>
-                  <div className="card-icon">⏱️</div>
-                  <div className="card-content">
-                    <h4>Monster race</h4>
-                    <p>60-second sprint</p>
-                  </div>
-                </button>
-                
-                <button className="mode-card advanced" onClick={startAdvanced}>
-                  <div className="card-icon">👺</div>
-                  <div className="card-content">
-                    <h4>Boss battle</h4>
-                    <p>Ultimate challenge</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-            
-            <div className="mode-section">
-              <h3 className="section-title">Classroom</h3>
-              <div className="mode-cards">
-                <button className="mode-card multiplayer" onClick={() => setGameMode('multiplayerSelect')}>
-                  <div className="card-icon">👥</div>
-                  <div className="card-content">
-                    <h4>Battle mode</h4>
-                    <p>Teacher-led classroom</p>
-                  </div>
-                </button>
-
-                <button className="mode-card squad" onClick={() => setGameMode('squadSelect')}>
-                  <div className="card-icon">⚔️</div>
-                  <div className="card-content">
-                    <h4>Squad Showdown</h4>
-                    <p>Battle with friends</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <div className="version-footer">
-            <button className="version-link" onClick={() => setGameMode('nameInput')}>
-              <HomeIcon className="btn-icon" /> Home
-            </button>
-            <button className="version-link" onClick={() => setGameMode('changelog')}>
-              {APP_VERSION}
-            </button>
             <a
-              className="version-link"
-              href="./Multiplication Trainer - Battle Mode Teacher Guide.pdf"
+              className="feedback-fab"
+              href="https://mathmonsters.featurebase.app/"
               target="_blank"
               rel="noopener noreferrer"
+              title="Send feedback"
+              aria-label="Send feedback"
             >
-              <TeacherIcon className="btn-icon" /> Teacher Guide
+              <MessageIcon className="feedback-fab-icon" />
             </a>
-            <span className="copyright-text">
-              Copyright {new Date().getFullYear()}, Eric Ellis Design
-            </span>
           </div>
         </div>
-        <a
-          className="feedback-fab"
-          href="https://mathmonsters.featurebase.app/"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Send feedback"
-          aria-label="Send feedback"
-        >
-          <MessageIcon className="feedback-fab-icon" />
-        </a>
       </div>
     );
   }
@@ -2490,13 +2724,13 @@ function AppContent() {
     };
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
-          <h1>Teacher Portal</h1>
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
+          <h1><PixelIcon bitmap={PIXEL_ICONS.chart} className="btn-icon btn-icon--standalone pixel-icon" /> Teacher Portal</h1>
           <p>Log in to see your students' usage reports.</p>
 
           <div className="teacher-auth-toggle">
@@ -2544,7 +2778,7 @@ function AppContent() {
             />
             {teacherAuthError && (
               <div className="name-error">
-                ❌ {teacherAuthError}
+                <PixelIcon bitmap={PIXEL_ICONS.multiply} className="btn-icon btn-icon--standalone pixel-icon" /> {teacherAuthError}
               </div>
             )}
             <button
@@ -2552,12 +2786,12 @@ function AppContent() {
               className="submit-button"
               disabled={teacherAuthLoading}
             >
-              {teacherAuthLoading ? 'Please wait...' : (
-                <><RocketIcon className="btn-icon" /> {teacherAuthMode === 'signup' ? 'Create account' : 'Log in'}</>
+              {teacherAuthLoading ? (<><PixelIcon bitmap={PIXEL_ICONS.refresh} className="btn-icon pixel-icon spin-icon" /> Please wait...</>) : (
+                <><PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> {teacherAuthMode === 'signup' ? 'Create account' : 'Log in'}</>
               )}
             </button>
             <button className="version-link" onClick={() => setGameMode('menu')}>
-              <ArrowLeftIcon className="btn-icon" /> Back to menu
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -2574,11 +2808,15 @@ function AppContent() {
     // against other navigation happening at the same time.
     if (!currentTeacher) {
       return (
-        <div className="App">
-          <div className="menu-container">
+        <div className="App training-page">
+          <div className="arcade-bg" aria-hidden="true">
+            <div className="arcade-bg-stars"></div>
+            <div className="arcade-bg-grid"></div>
+          </div>
+          <div className="menu-container training-arcade results-arcade">
             <p>You've been logged out.</p>
             <button className="submit-button" onClick={() => setGameMode('teacherAuth')}>
-              Log in again
+              <PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Log in again
             </button>
           </div>
         </div>
@@ -2603,13 +2841,13 @@ function AppContent() {
     };
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
-          <h1>{currentTeacher?.displayName || 'Teacher'}</h1>
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
+          <h1><PixelIcon bitmap={PIXEL_ICONS.chart} className="btn-icon btn-icon--standalone pixel-icon" /> {currentTeacher?.displayName || 'Teacher'}</h1>
           <p>Your students' usage reports, updated live for the last 30 days.</p>
 
           <div className="teacher-dashboard-list">
@@ -2623,7 +2861,7 @@ function AppContent() {
               <div key={report.dayKey} className="teacher-report-row">
                 <span className="teacher-report-date">{report.displayDate}</span>
                 <button className="submit-button" onClick={() => handleDownloadReport(report)}>
-                  <DownloadIcon className="btn-icon" /> Download CSV
+                  <PixelIcon bitmap={PIXEL_ICONS.chart} className="btn-icon pixel-icon" /> Download CSV
                 </button>
               </div>
             ))}
@@ -2631,10 +2869,10 @@ function AppContent() {
 
           <div className="game-controls">
             <button onClick={handleTeacherLogout} className="back-button">
-              Log Out
+              <PixelIcon bitmap={PIXEL_ICONS.stop} className="btn-icon pixel-icon" /> Log Out
             </button>
             <button onClick={() => setGameMode('menu')} className="back-button">
-              <ArrowLeftIcon className="btn-icon" /> Back to menu
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -2645,26 +2883,26 @@ function AppContent() {
   // Multiplayer Mode Selection
   if (gameMode === 'multiplayerSelect') {
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
           <h1>Classroom battle mode</h1>
           <p>Join your classmates in an epic monster math battle!</p>
           <p className="teacher-guide-paragraph"><a href="./Multiplication Trainer - Battle Mode Teacher Guide.pdf" target="_blank" rel="noopener noreferrer" className="teacher-guide-link">Teacher Guide: How to Use Battle Mode in Your Classroom</a></p>
           <div className="menu-buttons">
             <button className="mode-button teacher" onClick={() => setGameMode('createSession')}>
-              <PlusCircleIcon className="btn-icon" /> Create classroom session
+              <PixelIcon bitmap={PIXEL_ICONS.plus} className="btn-icon pixel-icon" /> Create classroom session
               <span className="mode-description">Teachers: start a new math battle for your students!</span>
             </button>
             <button className="mode-button student" onClick={() => setGameMode('joinSession')}>
-              <BackpackIcon className="btn-icon" /> Join classroom session
+              <PixelIcon bitmap={PIXEL_ICONS.swords} className="btn-icon pixel-icon" /> Join classroom session
               <span className="mode-description">Students: enter a session code to join the battle!</span>
             </button>
             <button className="mode-button back" onClick={() => setGameMode('menu')}>
-              <ArrowLeftIcon className="btn-icon" /> Back to menu
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -2675,25 +2913,25 @@ function AppContent() {
   // Monster Squad Showdown Selection
   if (gameMode === 'squadSelect') {
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
           <h1>Monster Squad Showdown</h1>
           <p>Battle with friends in small group competitions!</p>
           <div className="menu-buttons">
             <button className="mode-button squad-create" onClick={() => setGameMode('createSquadBattle')}>
-              <BoltIcon className="btn-icon" /> Start Squad Battle
+              <PixelIcon bitmap={PIXEL_ICONS.plus} className="btn-icon pixel-icon" /> Start Squad Battle
               <span className="mode-description">Create a battle and invite friends to join!</span>
             </button>
             <button className="mode-button squad-join" onClick={() => setGameMode('joinSquadBattle')}>
-              <ShieldIcon className="btn-icon" /> Join Squad Battle
+              <PixelIcon bitmap={PIXEL_ICONS.swords} className="btn-icon pixel-icon" /> Join Squad Battle
               <span className="mode-description">Enter a 3-character code to join a friend's battle!</span>
             </button>
             <button className="mode-button back" onClick={() => setGameMode('menu')}>
-              <ArrowLeftIcon className="btn-icon" /> Back to menu
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -2744,12 +2982,12 @@ function AppContent() {
     };
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
           <h1>Choose Your Battle</h1>
           <p>Select a battle type to challenge your friends!</p>
           <div className="division-toggle">
@@ -2766,7 +3004,7 @@ function AppContent() {
               onClick={() => handleCreateSquadBattle('quickClash')}
               disabled={isCreatingSquad}
             >
-              <BoltIcon className="btn-icon" /> Quick Clash
+              <PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Quick Clash
               <span className="mode-description">3 minutes • Fast-paced competition</span>
             </button>
 
@@ -2775,7 +3013,7 @@ function AppContent() {
               onClick={() => handleCreateSquadBattle('survival')}
               disabled={isCreatingSquad}
             >
-              <SkullIcon className="btn-icon" /> Survival
+              <PixelIcon bitmap={PIXEL_ICONS.skull} className="btn-icon pixel-icon" /> Survival
               <span className="mode-description">Last player standing wins!</span>
             </button>
 
@@ -2784,13 +3022,13 @@ function AppContent() {
               onClick={() => setGameMode('squadSelect')}
               disabled={isCreatingSquad}
             >
-              <ArrowLeftIcon className="btn-icon" /> Back to squad options
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Back to squad options
             </button>
           </div>
 
           {isCreatingSquad && (
             <div className="loading-message">
-              Creating your squad battle...
+              <PixelIcon bitmap={PIXEL_ICONS.refresh} className="btn-icon pixel-icon spin-icon" /> Creating your squad battle...
             </div>
           )}
         </div>
@@ -2861,14 +3099,16 @@ function AppContent() {
     const playerCount = squadData?.players?.length || 0;
     const maxPlayers = 6;
 
+    const battleTypeIcon = squadData?.battleType === 'survival' ? PIXEL_ICONS.skull : PIXEL_ICONS.raygun;
+
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className={`menu-container ${lobbyClass}`}>
-          <h1>{battleInfo.emoji} {battleInfo.name} Lobby</h1>
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className={`menu-container training-arcade results-arcade ${lobbyClass}`}>
+          <h1><PixelIcon bitmap={battleTypeIcon} className="btn-icon btn-icon--standalone pixel-icon" /> {battleInfo.name} Lobby</h1>
           <div className="squad-code-display">
             <h2>Squad Code: <span className="code-highlight">{squadCode}</span></h2>
             <p>Share this code with your friends!</p>
@@ -2887,11 +3127,11 @@ function AppContent() {
                 <div key={player.name} className={`player-item ${player.isHost ? 'host' : ''} ${player.isReady ? 'ready' : 'not-ready'}`}>
                   <div className="player-info">
                     <span className="player-name">
-                      {player.isHost && '👑 '}
+                      {player.isHost && <PixelIcon bitmap={PIXEL_ICONS.crown} className="btn-icon btn-icon--standalone pixel-icon" />}
                       {player.name}
                     </span>
                     <span className={`ready-status ${player.isReady ? 'ready' : 'not-ready'}`}>
-                      {player.isReady ? '✅ Ready' : '⏳ Not Ready'}
+                      {player.isReady ? (<><PixelIcon bitmap={PIXEL_ICONS.check} className="btn-icon btn-icon--standalone pixel-icon" /> Ready</>) : (<><PixelIcon bitmap={PIXEL_ICONS.hourglass} className="btn-icon btn-icon--standalone pixel-icon" /> Not Ready</>)}
                     </span>
                   </div>
                 </div>
@@ -2904,7 +3144,7 @@ function AppContent() {
               className={`mode-button ready-button ${isPlayerReady ? 'ready' : 'not-ready'}`}
               onClick={handlePlayerReady}
             >
-              {isPlayerReady ? (<><CheckIcon className="btn-icon" /> Ready!</>) : (<><HourglassIcon className="btn-icon" /> I'm Ready!</>)}
+              {isPlayerReady ? (<><PixelIcon bitmap={PIXEL_ICONS.check} className="btn-icon pixel-icon" /> Ready!</>) : (<><PixelIcon bitmap={PIXEL_ICONS.hourglass} className="btn-icon pixel-icon" /> I'm Ready!</>)}
             </button>
 
             {isSquadHost && (
@@ -2913,14 +3153,14 @@ function AppContent() {
                 onClick={handleStartBattle}
                 disabled={!allReady || playerCount < 2}
               >
-                <RocketIcon className="btn-icon" /> Start Battle!
+                <PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Start Battle!
                 {!allReady && <span className="button-note">All players must be ready</span>}
                 {playerCount < 2 && <span className="button-note">Need at least 2 players</span>}
               </button>
             )}
 
             <button className="mode-button back" onClick={handleLeaveBattle}>
-              <ArrowLeftIcon className="btn-icon" /> Leave Squad
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Leave Squad
             </button>
           </div>
         </div>
@@ -2982,12 +3222,12 @@ function AppContent() {
     };
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
           <h1>Join Squad Battle</h1>
           <p>Enter the 3-character code your friend shared with you!</p>
 
@@ -3013,8 +3253,7 @@ function AppContent() {
               onClick={handleJoinSquadBattle}
               disabled={!squadInputCode.trim() || isJoiningSquad}
             >
-              <ShieldIcon className="btn-icon" /> Join Battle!
-              {isJoiningSquad && <span className="mode-description">Joining...</span>}
+              {isJoiningSquad ? (<><PixelIcon bitmap={PIXEL_ICONS.refresh} className="btn-icon pixel-icon spin-icon" /> Joining...</>) : (<><PixelIcon bitmap={PIXEL_ICONS.swords} className="btn-icon pixel-icon" /> Join Battle!</>)}
             </button>
 
             <button
@@ -3022,15 +3261,9 @@ function AppContent() {
               onClick={() => setGameMode('squadSelect')}
               disabled={isJoiningSquad}
             >
-              <ArrowLeftIcon className="btn-icon" /> Back to squad options
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Back to squad options
             </button>
           </div>
-
-          {isJoiningSquad && (
-            <div className="loading-message">
-              Joining squad battle...
-            </div>
-          )}
         </div>
       </div>
     );
@@ -3136,16 +3369,16 @@ function AppContent() {
       ?.sort((a, b) => b.score - a.score) || [];
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
 
-        <div className={`game-container ${battleClass}`}>
+        <div className={`game-container training-arcade ${battleClass}`}>
           <div className="game-header">
             <div className="compact-game-stats">
-              <span className="battle-type">{battleInfo.emoji} {battleInfo.name}</span>
+              <span className="battle-type"><PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon btn-icon--standalone pixel-icon" /> {battleInfo.name}</span>
               <span className="timer">{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</span>
               <span className="score">
                 {score.correct}/{score.total}
@@ -3209,7 +3442,7 @@ function AppContent() {
                     disabled={!userAnswer.trim() || !gameActive || timeLeft === 0}
                     className="submit-button"
                   >
-                    <BoltIcon className="btn-icon" /> Attack!
+                    <PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Attack!
                   </button>
                 </div>
               </>
@@ -3221,10 +3454,12 @@ function AppContent() {
             <div className="live-players">
               {sortedPlayers.map((player, index) => (
                 <div key={player.name} className={`live-player-item rank-${index + 1}`}>
-                  <div className="rank-badge">#{index + 1}</div>
+                  <div className="rank-badge">
+                    {index < 3 ? <PixelIcon bitmap={PIXEL_ICONS.trophy} className="btn-icon btn-icon--standalone pixel-icon" /> : `#${index + 1}`}
+                  </div>
                   <div className="player-details">
                     <span className="player-name">
-                      {player.isHost && '👑 '}
+                      {player.isHost && <PixelIcon bitmap={PIXEL_ICONS.crown} className="btn-icon btn-icon--standalone pixel-icon" />}
                       {player.name}
                       {player.name === userName && ' (You)'}
                     </span>
@@ -3243,11 +3478,11 @@ function AppContent() {
           <div className="game-controls">
             {timeLeft === 0 ? (
               <button className="mode-button results" onClick={() => setGameMode('squadResults')}>
-                <TrophyIcon className="btn-icon" /> View Results
+                <PixelIcon bitmap={PIXEL_ICONS.chart} className="btn-icon pixel-icon" /> View Results
               </button>
             ) : (
               <button className="back-button" onClick={handleLeaveSquadBattle}>
-                <ArrowLeftIcon className="btn-icon" /> Leave Battle
+                <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Leave Battle
               </button>
             )}
           </div>
@@ -3367,16 +3602,16 @@ function AppContent() {
       }) || [];
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
 
-        <div className="game-container survival-mode">
+        <div className="game-container training-arcade survival-mode">
           <div className="game-header">
             <div className="compact-game-stats">
-              <span className="battle-type">💀 Survival Mode</span>
+              <span className="battle-type"><PixelIcon bitmap={PIXEL_ICONS.skull} className="btn-icon btn-icon--standalone pixel-icon" /> Survival Mode</span>
               <span className="score">
                 {score.correct}/{score.total}
                 {currentStreak > 0 && <span className="streak"> 🔥{currentStreak}</span>}
@@ -3452,7 +3687,7 @@ function AppContent() {
                     disabled={!userAnswer.trim() || isEliminated || gameOver}
                     className="submit-button"
                   >
-                    <BoltIcon className="btn-icon" /> Attack!
+                    <PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Attack!
                   </button>
                 </div>
               </>
@@ -3465,11 +3700,11 @@ function AppContent() {
               {sortedPlayers.map((player, index) => (
                 <div key={player.name} className={`live-player-item rank-${index + 1} ${player.isEliminated ? 'eliminated' : ''}`}>
                   <div className={`rank-badge ${player.isEliminated ? 'eliminated' : ''}`}>
-                    {player.isEliminated ? '💀' : `#${index + 1}`}
+                    {player.isEliminated ? <PixelIcon bitmap={PIXEL_ICONS.skull} className="btn-icon btn-icon--standalone pixel-icon" /> : (index < 3 ? <PixelIcon bitmap={PIXEL_ICONS.trophy} className="btn-icon btn-icon--standalone pixel-icon" /> : `#${index + 1}`)}
                   </div>
                   <div className="player-details">
                     <span className="player-name">
-                      {player.isHost && '👑 '}
+                      {player.isHost && <PixelIcon bitmap={PIXEL_ICONS.crown} className="btn-icon btn-icon--standalone pixel-icon" />}
                       {player.name}
                       {player.name === userName && ' (You)'}
                       {player.isEliminated && ' - ELIMINATED'}
@@ -3489,11 +3724,11 @@ function AppContent() {
           <div className="game-controls">
             {gameOver ? (
               <button className="mode-button results" onClick={() => setGameMode('squadResults')}>
-                <TrophyIcon className="btn-icon" /> View Results
+                <PixelIcon bitmap={PIXEL_ICONS.chart} className="btn-icon pixel-icon" /> View Results
               </button>
             ) : (
               <button className="back-button" onClick={handleLeaveSurvival}>
-                <ArrowLeftIcon className="btn-icon" /> Leave Survival
+                <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Leave Survival
               </button>
             )}
           </div>
@@ -3510,9 +3745,9 @@ function AppContent() {
     };
 
     const battleTypeDisplay = {
-      quickClash: { name: 'Quick Clash', emoji: '⚡', description: '3-minute speed battle' },
-      epicDuel: { name: 'Epic Duel', emoji: '🏆', description: '5-minute marathon' },
-      survival: { name: 'Survival Mode', emoji: '💀', description: 'Last player standing' }
+      quickClash: { name: 'Quick Clash', icon: PIXEL_ICONS.raygun, description: '3-minute speed battle' },
+      epicDuel: { name: 'Epic Duel', icon: PIXEL_ICONS.trophy, description: '5-minute marathon' },
+      survival: { name: 'Survival Mode', icon: PIXEL_ICONS.skull, description: 'Last player standing' }
     };
 
     const currentBattleType = battleTypeDisplay[squadData?.battleType] || battleTypeDisplay.quickClash;
@@ -3532,18 +3767,18 @@ function AppContent() {
     const playerRank = finalResults.findIndex(p => p.name === userName) + 1;
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
 
-        <div className="results-container">
+        <div className="results-container training-arcade results-arcade">
           <div className="results-header">
             <h1>Battle Complete!</h1>
             <div className="battle-summary">
               <div className="battle-type-display">
-                <span className="battle-emoji">{currentBattleType.emoji}</span>
+                <PixelIcon bitmap={currentBattleType.icon} className="btn-icon btn-icon--standalone pixel-icon" />
                 <div className="battle-details">
                   <h2>{currentBattleType.name}</h2>
                   <p>{currentBattleType.description}</p>
@@ -3559,9 +3794,9 @@ function AppContent() {
               <div className="rank-display">
                 <div className="rank-position">#{playerRank}</div>
                 <div className="rank-text">
-                  {playerRank === 1 && '🏆 Champion!'}
-                  {playerRank === 2 && '🥈 Runner-up!'}
-                  {playerRank === 3 && '🥉 Third place!'}
+                  {playerRank === 1 && (<><PixelIcon bitmap={PIXEL_ICONS.crown} className="btn-icon btn-icon--standalone pixel-icon" /> Champion!</>)}
+                  {playerRank === 2 && (<><PixelIcon bitmap={PIXEL_ICONS.trophy} className="btn-icon btn-icon--standalone pixel-icon" /> Runner-up!</>)}
+                  {playerRank === 3 && (<><PixelIcon bitmap={PIXEL_ICONS.trophy} className="btn-icon btn-icon--standalone pixel-icon" /> Third place!</>)}
                   {playerRank > 3 && `${playerRank}th place`}
                 </div>
               </div>
@@ -3577,7 +3812,7 @@ function AppContent() {
                 {squadData?.battleType === 'survival' && (
                   <div className="stat-box">
                     <div className="stat-number">
-                      {playerResult?.isEliminated ? '💀' : '❤️'}
+                      <PixelIcon bitmap={playerResult?.isEliminated ? PIXEL_ICONS.skull : PIXEL_ICONS.shield} className="btn-icon btn-icon--standalone pixel-icon" />
                     </div>
                     <div className="stat-label">
                       {playerResult?.isEliminated ? 'Eliminated' : 'Survived'}
@@ -3594,14 +3829,15 @@ function AppContent() {
               {finalResults.map((player, index) => (
                 <div key={player.name} className={`leaderboard-item rank-${index + 1} ${player.name === userName ? 'current-player' : ''}`}>
                   <div className="rank-badge">
-                    {index === 0 && '🏆'}
-                    {index === 1 && '🥈'}
-                    {index === 2 && '🥉'}
-                    {index > 2 && `#${index + 1}`}
+                    {index === 0 ? (
+                      <PixelIcon bitmap={PIXEL_ICONS.crown} className="btn-icon btn-icon--standalone pixel-icon" />
+                    ) : index < 3 ? (
+                      <PixelIcon bitmap={PIXEL_ICONS.trophy} className="btn-icon btn-icon--standalone pixel-icon" />
+                    ) : `#${index + 1}`}
                   </div>
                   <div className="player-info">
                     <div className="player-name">
-                      {player.isHost && '👑 '}
+                      {player.isHost && <PixelIcon bitmap={PIXEL_ICONS.crown} className="btn-icon btn-icon--standalone pixel-icon" />}
                       {player.name}
                       {player.name === userName && ' (You)'}
                       {squadData?.battleType === 'survival' && player.isEliminated && (
@@ -3622,10 +3858,10 @@ function AppContent() {
 
           <div className="results-actions">
             <button className="play-again-btn" onClick={() => { resetSquadBattleState(); setGameMode('squadSelect'); }}>
-              <RefreshIcon className="btn-icon" /> Play Another Battle
+              <PixelIcon bitmap={PIXEL_ICONS.refresh} className="btn-icon pixel-icon" /> Play Another Battle
             </button>
             <button className="back-home-btn" onClick={handleReturnToMenu}>
-              <HomeIcon className="btn-icon" /> Return to Kingdom
+              <PixelIcon bitmap={PIXEL_ICONS.home} className="btn-icon pixel-icon" /> Return to Kingdom
             </button>
           </div>
         </div>
@@ -3675,12 +3911,12 @@ function AppContent() {
     };
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
           <h1>Create classroom session</h1>
           <p>Hello Teacher {userName}! Set up a monster math battle for your students.</p>
           
@@ -3723,10 +3959,10 @@ function AppContent() {
               onClick={handleCreateSession}
               disabled={isCreating}
             >
-              {isCreating ? (<><RefreshIcon className="btn-icon" /> Creating...</>) : (<><RocketIcon className="btn-icon" /> Create session</>)}
+              {isCreating ? (<><PixelIcon bitmap={PIXEL_ICONS.refresh} className="btn-icon pixel-icon spin-icon" /> Creating...</>) : (<><PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Create session</>)}
             </button>
             <button className="mode-button back" onClick={() => setGameMode('multiplayerSelect')}>
-              <ArrowLeftIcon className="btn-icon" /> Back
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Back
             </button>
           </div>
         </div>
@@ -3796,6 +4032,11 @@ function AppContent() {
             setUserAnswer('');
             setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
             setTimeLeft(data.timeLimit || 60);
+            // See startUnlimited(): reset leftover battle-arena state from a round
+            // that ended mid-animation, so the arena doesn't remount already primed
+            // to replay a laser-fire/miss on the very first question.
+            setBattleAnim('idle');
+            setMonsterTaunt('');
 
             // navigate() directly (not setGameMode()) - this fires from a Firestore
             // listener callback, not a user click, so it can race the URL-sync effect
@@ -3819,12 +4060,12 @@ function AppContent() {
     };
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
           <h1>Join classroom session</h1>
           <p>Hi {userName}! Enter the session code your teacher gave you.</p>
           
@@ -3849,14 +4090,14 @@ function AppContent() {
               onClick={handleJoinSession}
               disabled={isJoining || !inputCode.trim() || inputCode.length !== 4}
             >
-              {isJoining ? (<><RefreshIcon className="btn-icon" /> Joining...</>) : (<><BackpackIcon className="btn-icon" /> Join battle!</>)}
+              {isJoining ? (<><PixelIcon bitmap={PIXEL_ICONS.refresh} className="btn-icon pixel-icon spin-icon" /> Joining...</>) : (<><PixelIcon bitmap={PIXEL_ICONS.swords} className="btn-icon pixel-icon" /> Join battle!</>)}
             </button>
             <button className="mode-button back" onClick={async () => {
               // Clean up any partial multiplayer state
               await cleanupMultiplayerState();
               setGameMode('multiplayerSelect');
             }}>
-              <ArrowLeftIcon className="btn-icon" /> Back
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Back
             </button>
           </div>
         </div>
@@ -3877,12 +4118,12 @@ function AppContent() {
     };
 
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
           <h1>Classroom lobby</h1>
           <div className="session-info">
             <h2>Session Code: <span className="session-code-display">{sessionCode}</span></h2>
@@ -3910,14 +4151,14 @@ function AppContent() {
               onClick={handleStartGame}
               disabled={!sessionData?.students || sessionData.students.length === 0}
             >
-              <RocketIcon className="btn-icon" /> Start battle!
+              <PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Start battle!
             </button>
             <button className="mode-button back" onClick={() => {
               if (sessionUnsubscribe) sessionUnsubscribe();
               setGameMode('menu');
               setIsMultiplayer(false);
             }}>
-              <ArrowLeftIcon className="btn-icon" /> Cancel Session
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Cancel Session
             </button>
           </div>
         </div>
@@ -3928,12 +4169,12 @@ function AppContent() {
   // Student Lobby
   if (gameMode === 'studentLobby') {
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
           <h1>Waiting for battle</h1>
           <div className="session-info">
             <h2>Session: {sessionCode}</h2>
@@ -3942,7 +4183,7 @@ function AppContent() {
           </div>
 
           <div className="students-list">
-            <h3>👥 Fellow Warriors ({sessionData?.students?.length || 0}):</h3>
+            <h3><PixelIcon bitmap={PIXEL_ICONS.swords} className="btn-icon btn-icon--standalone pixel-icon" /> Fellow Warriors ({sessionData?.students?.length || 0}):</h3>
             <div className="students-grid">
               {sessionData?.students?.map((student, index) => (
                 <div key={index} className="student-card">
@@ -3962,7 +4203,7 @@ function AppContent() {
               await cleanupMultiplayerState();
               setGameMode('menu');
             }}>
-              <ArrowLeftIcon className="btn-icon" /> Leave Session
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Leave Session
             </button>
           </div>
         </div>
@@ -3976,49 +4217,49 @@ function AppContent() {
     const isGameFinished = timeLeft <= 0;
     
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
 
         {/* Confirmation Dialog Overlay - this screen has its own early return, so it
             needs its own copy; it doesn't reach the shared one at the bottom of the file. */}
         {showConfirm && (
           <div className="error-overlay" onClick={hideConfirmDialog}>
             <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-              <div className="confirm-icon"><QuestionMarkCircleIcon className="btn-icon btn-icon--standalone" /></div>
+              <div className="confirm-icon"><PixelIcon bitmap={PIXEL_ICONS.question} className="btn-icon btn-icon--standalone pixel-icon" /></div>
               <div className="confirm-text">{confirmMessage}</div>
               <div className="confirm-buttons">
                 <button className="confirm-button confirm-yes" onClick={handleConfirm}>
-                  <CheckIcon className="btn-icon" /> Yes
+                  <PixelIcon bitmap={PIXEL_ICONS.check} className="btn-icon pixel-icon" /> Yes
                 </button>
                 <button className="confirm-button confirm-no" onClick={hideConfirmDialog}>
-                  <CloseIcon className="btn-icon" /> Cancel
+                  <PixelIcon bitmap={PIXEL_ICONS.multiply} className="btn-icon pixel-icon" /> Cancel
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="menu-container">
-          <h1>🍎 Battle monitor</h1>
+        <div className="menu-container training-arcade results-arcade">
+          <h1><PixelIcon bitmap={PIXEL_ICONS.shield} className="btn-icon btn-icon--standalone pixel-icon" /> Battle monitor</h1>
           <div className="session-info">
             <h2>Session: {sessionCode}</h2>
             <p>Mode: {sessionData?.gameMode === 'timed' ? 'Monster Race (60s)' : 'Boss Battle (60s)'}</p>
             {!isGameFinished ? (
               <div className="timer-display">
-                <h2>⏰ Time Remaining: {gameTimeLeft}s</h2>
+                <h2><PixelIcon bitmap={PIXEL_ICONS.clock} className="btn-icon btn-icon--standalone pixel-icon" /> Time Remaining: {gameTimeLeft}s</h2>
               </div>
             ) : (
               <div className="game-finished">
-                <h2>🏁 Battle Complete!</h2>
+                <h2><PixelIcon bitmap={PIXEL_ICONS.flag} className="btn-icon btn-icon--standalone pixel-icon" /> Battle Complete!</h2>
               </div>
             )}
           </div>
-          
+
           <div className="live-leaderboard-monitor">
-            <h3>📊 Live Battle Progress</h3>
+            <h3><PixelIcon bitmap={PIXEL_ICONS.chart} className="btn-icon btn-icon--standalone pixel-icon" /> Live Battle Progress</h3>
             <div className="leaderboard-grid">
               {sessionData?.students
                 ?.sort((a, b) => {
@@ -4033,7 +4274,7 @@ function AppContent() {
                   return (
                     <div key={student.name} className={`leaderboard-entry-monitor ${index < 3 ? 'top-three' : ''}`}>
                       <div className="rank">
-                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                        {index < 3 ? <PixelIcon bitmap={PIXEL_ICONS.trophy} className="btn-icon btn-icon--standalone pixel-icon" /> : `#${index + 1}`}
                       </div>
                       <div className="player-info-monitor">
                         <span className="player-name">{student.name}</span>
@@ -4059,10 +4300,10 @@ function AppContent() {
                   className="mode-button teacher" 
                   onClick={() => setGameMode('multiplayerResults')}
                 >
-                  <ChartIcon className="btn-icon" /> View Final Results
+                  <PixelIcon bitmap={PIXEL_ICONS.chart} className="btn-icon pixel-icon" /> View Final Results
                 </button>
-                <button 
-                  className="mode-button back" 
+                <button
+                  className="mode-button back"
                   onClick={async () => {
                     await cleanupMultiplayerState();
                     setGameMode('menu');
@@ -4073,12 +4314,12 @@ function AppContent() {
                     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
                   }}
                 >
-                  <HomeIcon className="btn-icon" /> Back to menu
+                  <PixelIcon bitmap={PIXEL_ICONS.home} className="btn-icon pixel-icon" /> Back to menu
                 </button>
               </>
             ) : (
-              <button 
-                className="mode-button danger" 
+              <button
+                className="mode-button danger"
                 onClick={() => {
                   showConfirmDialog(
                     'Are you sure you want to end this battle for all students? This action cannot be undone.',
@@ -4090,7 +4331,7 @@ function AppContent() {
                   );
                 }}
               >
-                <StopIcon className="btn-icon" /> End battle now
+                <PixelIcon bitmap={PIXEL_ICONS.stop} className="btn-icon pixel-icon" /> End battle now
               </button>
             )}
           </div>
@@ -4123,12 +4364,12 @@ function AppContent() {
     const winner = sortedStudents[0];
     
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="results-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="results-container training-arcade results-arcade">
           <h1>Battle results</h1>
           
           {winner && (
@@ -4144,7 +4385,11 @@ function AppContent() {
               {sortedStudents.map((student, index) => (
                 <div key={student.name} className={`final-result-entry ${index === 0 ? 'winner' : index < 3 ? 'podium' : ''}`}>
                   <div className="final-rank">
-                    {index === 0 ? '👑' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
+                    {index === 0 ? (
+                      <PixelIcon bitmap={PIXEL_ICONS.crown} className="btn-icon btn-icon--standalone pixel-icon" />
+                    ) : index < 3 ? (
+                      <PixelIcon bitmap={PIXEL_ICONS.trophy} className="btn-icon btn-icon--standalone pixel-icon" />
+                    ) : `#${index + 1}`}
                   </div>
                   <div className="final-player-info">
                     <h4>{student.name}</h4>
@@ -4190,11 +4435,11 @@ function AppContent() {
                   setGameMode('teacherLobby');
                 }}
               >
-                <RefreshIcon className="btn-icon" /> New Battle
+                <PixelIcon bitmap={PIXEL_ICONS.refresh} className="btn-icon pixel-icon" /> New Battle
               </button>
             )}
-            <button 
-              className="mode-button back" 
+            <button
+              className="mode-button back"
               onClick={async () => {
                 await cleanupMultiplayerState();
                 setGameMode('menu');
@@ -4205,7 +4450,7 @@ function AppContent() {
                 setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
               }}
             >
-              <HomeIcon className="btn-icon" /> Back to menu
+              <PixelIcon bitmap={PIXEL_ICONS.home} className="btn-icon pixel-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -4216,13 +4461,13 @@ function AppContent() {
   // Changelog screen
   if (gameMode === 'changelog') {
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="menu-container">
-          <h1>Version history</h1>
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="menu-container training-arcade results-arcade">
+          <h1><PixelIcon bitmap={PIXEL_ICONS.clock} className="btn-icon btn-icon--standalone pixel-icon" /> Version history</h1>
           <div className="changelog-container">
             {CHANGELOG.map((release) => (
               <div key={release.version} className="changelog-entry">
@@ -4240,7 +4485,7 @@ function AppContent() {
           </div>
           <div className="menu-buttons">
             <button className="mode-button back" onClick={() => setGameMode('menu')}>
-              <ArrowLeftIcon className="btn-icon" /> Back to menu
+              <PixelIcon bitmap={PIXEL_ICONS.arrowLeft} className="btn-icon pixel-icon" /> Back to menu
             </button>
           </div>
         </div>
@@ -4254,12 +4499,12 @@ function AppContent() {
     const showHistory = currentModeHistory.length > 0;
     
     return (
-      <div className="App">
-        <div className="floating-ghost">👻</div>
-        <div className="floating-skull">💀</div>
-        <div className="floating-robot">🤖</div>
-        <div className="floating-demon">👹</div>
-        <div className="results-container">
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+        <div className="results-container training-arcade results-arcade">
           <h1>Monster master {userName}!</h1>
           
           <div className="current-results">
@@ -4320,12 +4565,21 @@ function AppContent() {
   }
 
   return (
-    <div className="App">
-      <div className="floating-ghost">👻</div>
-      <div className="floating-skull">💀</div>
-      <div className="floating-robot">🤖</div>
-      <div className="floating-demon">👹</div>
-      
+    <div className={`App ${(gameMode === 'unlimited' || gameMode === 'detective' || gameMode === 'twoDigit' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced') ? 'training-page' : ''}`}>
+      {(gameMode === 'unlimited' || gameMode === 'detective' || gameMode === 'twoDigit' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced') ? (
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+      ) : (
+        <>
+          <div className="floating-ghost">👻</div>
+          <div className="floating-skull">💀</div>
+          <div className="floating-robot">🤖</div>
+          <div className="floating-demon">👹</div>
+        </>
+      )}
+
       {/* Countdown Overlay */}
       {isCountingDown && (
         <div className="countdown-overlay">
@@ -4368,12 +4622,45 @@ function AppContent() {
       )}
       
       {gameMode === 'detective' ? (
-        <div className="detective-container">
+        <div className="detective-container training-arcade">
+          <div className="training-arcade-bg" aria-hidden="true">
+            <div className="arcade-bg-stars" />
+            <div className="arcade-bg-grid" />
+          </div>
+
           <div className="game-header">
             <div className="compact-game-stats">
               <span className="detective-progress">
                 Case {detectiveQuestionCount} of {detectiveMaxQuestions}
               </span>
+            </div>
+          </div>
+
+          <div className="battle-arena">
+            <div className="battle-arena-floor" />
+            <div className={`laser-cannon ${battleAnim !== 'idle' ? 'cannon-fire' : ''}`}>
+              <PixelIcon bitmap={PIXEL_ICONS.raygun} className="battle-raygun-icon" />
+              <div className="muzzle-flash" />
+            </div>
+            <div className={`laser-beam ${battleAnim === 'hit' ? 'laser-fire-hit' : ''} ${battleAnim === 'miss' ? 'laser-fire-miss' : ''}`} />
+            <div
+              className={`monster-wrap ${battleAnim === 'hit' ? 'monster-hit' : ''} ${battleAnim === 'miss' ? 'monster-miss' : ''}`}
+              style={{ '--monster-color': `var(${battleMonsterColor})` }}
+            >
+              <PixelIcon bitmap={PIXEL_ICONS[battleMonsterIcon]} className="battle-monster-icon" />
+              {battleAnim === 'hit' && (
+                <>
+                  <div className="impact-flash" />
+                  <div className="explosion-burst">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <span key={i} className="burst-particle" style={{ '--i': i }} />
+                    ))}
+                  </div>
+                </>
+              )}
+              {battleAnim === 'miss' && (
+                <div className="monster-taunt-bubble">{monsterTaunt}</div>
+              )}
             </div>
           </div>
 
@@ -4454,7 +4741,7 @@ function AppContent() {
                       : (!detectiveInput.factor1 || !detectiveInput.factor2)
                   }
                 >
-                  <SearchIcon className="btn-icon" /> Solve case!
+                  <SearchIcon className="btn-icon" /> FIRE!
                 </button>
               </div>
             )}
@@ -4462,15 +4749,20 @@ function AppContent() {
 
           <div className="game-controls">
             <button onClick={endGame} className="done-button">
-              <CloseIcon className="btn-icon" /> Close detective agency!
+              <CloseIcon className="btn-icon" /> Done
             </button>
-            <button onClick={backToMenu} className="back-button">
-              <HomeIcon className="btn-icon" /> Return to kingdom
+            <button onClick={backToMenu} className="quit-link">
+              Return to kingdom without saving
             </button>
           </div>
         </div>
       ) : gameMode === 'twoDigit' ? (
-        <div className="twodigit-container">
+        <div className="twodigit-container training-arcade">
+          <div className="training-arcade-bg" aria-hidden="true">
+            <div className="arcade-bg-stars" />
+            <div className="arcade-bg-grid" />
+          </div>
+
           <div className="game-header">
             <div className="compact-game-stats">
               <span className="twodigit-progress">
@@ -4479,6 +4771,34 @@ function AppContent() {
               <span className="score">
                 {score.correct}/{score.total}
               </span>
+            </div>
+          </div>
+
+          <div className="battle-arena">
+            <div className="battle-arena-floor" />
+            <div className={`laser-cannon ${battleAnim !== 'idle' ? 'cannon-fire' : ''}`}>
+              <PixelIcon bitmap={PIXEL_ICONS.raygun} className="battle-raygun-icon" />
+              <div className="muzzle-flash" />
+            </div>
+            <div className={`laser-beam ${battleAnim === 'hit' ? 'laser-fire-hit' : ''} ${battleAnim === 'miss' ? 'laser-fire-miss' : ''}`} />
+            <div
+              className={`monster-wrap ${battleAnim === 'hit' ? 'monster-hit' : ''} ${battleAnim === 'miss' ? 'monster-miss' : ''}`}
+              style={{ '--monster-color': `var(${battleMonsterColor})` }}
+            >
+              <PixelIcon bitmap={PIXEL_ICONS[battleMonsterIcon]} className="battle-monster-icon" />
+              {battleAnim === 'hit' && (
+                <>
+                  <div className="impact-flash" />
+                  <div className="explosion-burst">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <span key={i} className="burst-particle" style={{ '--i': i }} />
+                    ))}
+                  </div>
+                </>
+              )}
+              {battleAnim === 'miss' && (
+                <div className="monster-taunt-bubble">{monsterTaunt}</div>
+              )}
             </div>
           </div>
 
@@ -4691,7 +5011,7 @@ function AppContent() {
                   className="submit-button twodigit-submit"
                   style={{ marginTop: '20px' }}
                 >
-                  Check Answer
+                  <BoltIcon className="btn-icon" /> FIRE!
                 </button>
               </div>
             )}
@@ -4725,13 +5045,20 @@ function AppContent() {
             <button onClick={endGame} className="done-button">
               Done
             </button>
-            <button onClick={backToMenu} className="back-button">
-              Back to Menu
+            <button onClick={backToMenu} className="quit-link">
+              Back to menu without saving
             </button>
           </div>
         </div>
       ) : (
-        <div className="game-container">
+        <div className={`game-container ${(gameMode === 'unlimited' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced') ? 'training-arcade' : ''}`}>
+          {(gameMode === 'unlimited' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced') && (
+            <div className="training-arcade-bg" aria-hidden="true">
+              <div className="arcade-bg-stars" />
+              <div className="arcade-bg-grid" />
+            </div>
+          )}
+
           <div className="game-header">
             <div className="compact-game-stats">
               {(gameMode === 'timed' || gameMode === 'advanced') && (
@@ -4748,7 +5075,36 @@ function AppContent() {
               )}
             </div>
           </div>
-          
+
+          {(gameMode === 'unlimited' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced') && (
+            <div className="battle-arena">
+              <div className="battle-arena-floor" />
+              <div className={`laser-cannon ${battleAnim !== 'idle' ? 'cannon-fire' : ''}`}>
+                <PixelIcon bitmap={PIXEL_ICONS.raygun} className="battle-raygun-icon" />
+                <div className="muzzle-flash" />
+              </div>
+              <div className={`laser-beam ${battleAnim === 'hit' ? 'laser-fire-hit' : ''} ${battleAnim === 'miss' ? 'laser-fire-miss' : ''}`} />
+              <div
+                className={`monster-wrap ${battleAnim === 'hit' ? 'monster-hit' : ''} ${battleAnim === 'miss' ? 'monster-miss' : ''}`}
+                style={{ '--monster-color': `var(${battleMonsterColor})` }}
+              >
+                <PixelIcon bitmap={PIXEL_ICONS[battleMonsterIcon]} className="battle-monster-icon" />
+                {battleAnim === 'hit' && (
+                  <>
+                    <div className="impact-flash" />
+                    <div className="explosion-burst">
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <span key={i} className="burst-particle" style={{ '--i': i }} />
+                      ))}
+                    </div>
+                  </>
+                )}
+                {battleAnim === 'miss' && (
+                  <div className="monster-taunt-bubble">{monsterTaunt}</div>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="question-container">
             {/* In multiplayer, only show question when feedback is not showing */}
@@ -4810,7 +5166,7 @@ function AppContent() {
                   />
                 )}
                 <button onClick={submitAnswer} className="submit-button">
-                  Attack Monster!
+                  {(gameMode === 'unlimited' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced') ? 'FIRE!' : 'Attack Monster!'}
                 </button>
               </div>
             )}
@@ -4819,11 +5175,11 @@ function AppContent() {
           <div className="game-controls">
             {(gameMode === 'unlimited' || gameMode === 'division') && (
               <button onClick={endGame} className="done-button">
-                Victory Celebration!
+                Done
               </button>
             )}
-            <button onClick={backToMenu} className="back-button">
-              <HomeIcon className="btn-icon" /> Return to kingdom
+            <button onClick={backToMenu} className="quit-link">
+              Return to kingdom without saving
             </button>
           </div>
         </div>

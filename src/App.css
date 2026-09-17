@@ -23,6 +23,24 @@
 
 /* Design System Color Variables */
 :root {
+  /* Arcade neon palette - defined globally (not just under .arcade-theme /
+     .training-arcade / .results-arcade) so global overlays like the
+     countdown, error, and confirm modals can use it regardless of which
+     screen/ancestor class they happen to render under. Screen-scoped rules
+     below redeclare the same values, which is harmless - it just means the
+     nearest declaration wins, same value either way. */
+  --arcade-bg-deep: #0a0618;
+  --arcade-bg-mid: #170f34;
+  --arcade-neon-pink: #ff2e9a;
+  --arcade-neon-cyan: #00f6ff;
+  --arcade-neon-yellow: #ffe600;
+  --arcade-neon-purple: #b026ff;
+  --arcade-neon-green: #39ff14;
+  --arcade-neon-orange: #ff8a00;
+  --arcade-text: #f5f0ff;
+  --font-arcade-display: 'Press Start 2P', 'Courier New', monospace;
+  --font-arcade-body: 'VT323', 'Courier New', monospace;
+
   /* Primary Colors - Orange */
   --primary-100: #FFF2EC;
   --primary-400: #FF640C;
@@ -610,72 +628,11 @@ body:has(input:focus) .mode-button::before {
   color: var(--white);
 }
 
-/* Squad Lobby Color Schemes */
-/* Quick Clash Lobby - Blue */
-.menu-container.quick-clash-lobby h1 {
-  color: #0284c7;
-}
-
-.menu-container.quick-clash-lobby .squad-code-display {
-  background: #e0f2fe;
-  border-color: #0ea5e9;
-}
-
-.menu-container.quick-clash-lobby .squad-code-display h2 {
-  color: #0369a1;
-}
-
-.menu-container.quick-clash-lobby .code-highlight {
-  background: #0ea5e9;
-  color: #ffffff;
-}
-
-.menu-container.quick-clash-lobby .mode-button.start-battle {
-  background: #0ea5e9;
-  border-color: #0284c7;
-}
-
-.menu-container.quick-clash-lobby .mode-button.start-battle:hover:not(:disabled) {
-  background: #0284c7;
-}
-
-.menu-container.quick-clash-lobby .mode-button.ready-button.ready {
-  background: #0ea5e9;
-  border-color: #0284c7;
-}
-
-/* Survival Lobby - Red */
-.menu-container.survival-lobby h1 {
-  color: #b91c1c;
-}
-
-.menu-container.survival-lobby .squad-code-display {
-  background: #fee2e2;
-  border-color: #dc2626;
-}
-
-.menu-container.survival-lobby .squad-code-display h2 {
-  color: #991b1b;
-}
-
-.menu-container.survival-lobby .code-highlight {
-  background: #dc2626;
-  color: #ffffff;
-}
-
-.menu-container.survival-lobby .mode-button.start-battle {
-  background: #dc2626;
-  border-color: #b91c1c;
-}
-
-.menu-container.survival-lobby .mode-button.start-battle:hover:not(:disabled) {
-  background: #b91c1c;
-}
-
-.menu-container.survival-lobby .mode-button.ready-button.ready {
-  background: #dc2626;
-  border-color: #b91c1c;
-}
+/* Squad Lobby Color Schemes (quick-clash-lobby/survival-lobby) used to give
+   this screen its own light blue/red palette; the whole squad flow is now
+   arcade-skinned unconditionally (see .results-arcade below), so those
+   per-battle-type overrides only fought the reskin's translucent buttons and
+   card colors via higher specificity - removed rather than re-fought. */
 
 .loading-message {
   margin-top: 20px;
@@ -1519,51 +1476,13 @@ body:has(input:focus) .mode-button::before {
   border-color: var(--purple-700);
 }
 
-/* Quick Clash Color Scheme - Electric Blue */
-.game-container.quick-clash .game-header {
-  background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
-}
-
-.game-container.quick-clash .battle-type {
-  background: #0284c7;
-  border-color: #0369a1;
-}
-
-.game-container.quick-clash .submit-button {
-  background: #0ea5e9;
-}
-
-.game-container.quick-clash .submit-button:hover:not(:disabled) {
-  background: #0284c7;
-}
-
-.game-container.quick-clash .answer-input:focus {
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
-}
-
-/* Survival Mode Color Scheme - Dark Red */
-.game-container.survival-mode .game-header {
-  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-}
-
-.game-container.survival-mode .battle-type {
-  background: #991b1b;
-  border-color: #7f1d1d;
-}
-
-.game-container.survival-mode .submit-button {
-  background: #dc2626;
-}
-
-.game-container.survival-mode .submit-button:hover:not(:disabled) {
-  background: #b91c1c;
-}
-
-.game-container.survival-mode .answer-input:focus {
-  border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
-}
+/* Quick Clash/Survival Mode Color Schemes used to give the live squad battle
+   screen its own light blue/red palette; squadBattle/squadSurvival are now
+   arcade-skinned unconditionally (game-container.training-arcade), so these
+   per-battle-type overrides only fought the reskin's translucent submit
+   button via higher specificity - removed rather than re-fought. .battle-type
+   and .answer-input:focus get their arcade treatment in the training-arcade
+   rules below. */
 
 /* Mobile optimizations for multiplayer */
 @media (max-width: 768px) {
@@ -2196,9 +2115,10 @@ body:has(input:focus) .mode-button::before {
   display: flex;
   gap: 15px;
   justify-content: center;
+  align-items: center;
 }
 
-.done-button, .back-button {
+.back-button {
   font-size: 0.85rem;
   font-weight: var(--font-weight-medium);
   padding: 8px 16px;
@@ -2208,23 +2128,53 @@ body:has(input:focus) .mode-button::before {
   transition: all 0.2s;
   font-family: inherit;
   box-shadow: none;
+  background: transparent;
+  color: var(--gray-500);
 }
 
+/* The primary in-game control: ends the round and takes the player to the
+   results screen. Styled as the obvious, prominent choice so it reads as
+   the "main" action next to the de-emphasized .quit-link. */
 .done-button {
-  background: var(--gray-50);
-  color: var(--gray-600);
+  font-size: 1rem;
+  font-weight: var(--font-weight-bold);
+  font-family: inherit;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--purple-600), var(--purple-700));
+  color: var(--white);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+  transition: all 0.2s;
 }
 
 .done-button:hover {
-  background: var(--gray-100);
-  color: var(--gray-700);
-  border-color: var(--gray-400);
-  transition: background-color 0.1s ease, color 0.1s ease;
+  background: linear-gradient(135deg, var(--purple-700), var(--purple-800));
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.45);
 }
 
-.back-button {
-  background: transparent;
+/* The secondary in-game control: quits straight to the menu with no
+   results screen. Deliberately link-like (no border/box) so it never
+   competes visually with .done-button. */
+.quit-link {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 8px 4px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: var(--font-weight-medium);
   color: var(--gray-500);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.quit-link:hover {
+  color: var(--gray-700);
+  background: none;
 }
 
 .back-button:hover {
@@ -2597,20 +2547,22 @@ body:has(input:focus) .mode-button::before {
 
 .countdown-display {
   text-align: center;
-  color: white;
+  color: var(--arcade-text, white);
+  font-family: var(--font-arcade-body), 'Courier New', monospace;
 }
 
 .countdown-display h2 {
   font-size: 2rem;
   margin-bottom: 20px;
-  color: #ffd23f;
+  color: var(--arcade-neon-yellow, #ffd23f);
+  text-shadow: 0 0 10px var(--arcade-neon-yellow, transparent);
 }
 
 .countdown-number {
   font-size: 8rem;
   font-weight: bold;
-  color: #ff6b35;
-  text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.5);
+  color: var(--arcade-neon-pink, #ff6b35);
+  text-shadow: 0 0 24px var(--arcade-neon-pink, rgba(255, 46, 154, 0.8));
   animation: countdownPulse 1s ease-in-out;
 }
 
@@ -2645,13 +2597,14 @@ body:has(input:focus) .mode-button::before {
 }
 
 .error-message {
-  background: white;
+  background: var(--arcade-bg-deep);
+  border: 2px solid var(--arcade-neon-orange);
   border-radius: 15px;
   padding: 30px;
   max-width: 400px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 30px rgba(255, 138, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.6);
   cursor: default;
   animation: errorSlideIn 0.3s ease-out;
 }
@@ -2659,28 +2612,34 @@ body:has(input:focus) .mode-button::before {
 .error-icon {
   font-size: 3rem;
   margin-bottom: 15px;
+  color: var(--arcade-neon-orange);
+  text-shadow: 0 0 12px var(--arcade-neon-orange);
 }
 
 .error-text {
-  font-size: 1.1rem;
-  color: #333;
+  font-family: var(--font-arcade-body);
+  font-size: 1.2rem;
+  color: var(--arcade-text);
   margin-bottom: 20px;
   line-height: 1.4;
 }
 
 .error-close-button {
-  background: #ff6b35;
-  color: white;
-  border: none;
+  font-family: var(--font-arcade-body);
+  background: #120a28;
+  color: var(--arcade-neon-orange);
+  border: 2px solid var(--arcade-neon-orange);
   border-radius: 8px;
   padding: 10px 20px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   cursor: pointer;
   transition: background 0.2s ease;
+  box-shadow: 0 0 10px rgba(255, 138, 0, 0.3);
 }
 
 .error-close-button:hover {
-  background: #e55a2b;
+  background: #1c1042;
+  box-shadow: 0 0 16px var(--arcade-neon-orange);
 }
 
 @keyframes errorSlideIn {
@@ -2696,13 +2655,14 @@ body:has(input:focus) .mode-button::before {
 
 /* Confirmation Dialog Styles */
 .confirm-dialog {
-  background: white;
+  background: var(--arcade-bg-deep);
+  border: 2px solid var(--arcade-neon-purple);
   border-radius: 15px;
   padding: 30px;
   max-width: 400px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 30px rgba(176, 38, 255, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.6);
   cursor: default;
   animation: errorSlideIn 0.3s ease-out;
 }
@@ -2710,11 +2670,14 @@ body:has(input:focus) .mode-button::before {
 .confirm-icon {
   font-size: 3rem;
   margin-bottom: 15px;
+  color: var(--arcade-neon-purple);
+  text-shadow: 0 0 12px var(--arcade-neon-purple);
 }
 
 .confirm-text {
-  font-size: 1.1rem;
-  color: #333;
+  font-family: var(--font-arcade-body);
+  font-size: 1.2rem;
+  color: var(--arcade-text);
   margin-bottom: 25px;
   line-height: 1.4;
 }
@@ -2726,32 +2689,38 @@ body:has(input:focus) .mode-button::before {
 }
 
 .confirm-button {
-  border: none;
+  font-family: var(--font-arcade-body);
   border-radius: 8px;
   padding: 12px 24px;
-  font-size: 1rem;
+  font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: bold;
 }
 
 .confirm-yes {
-  background: #dc2626;
-  color: white;
+  background: rgba(255, 46, 92, 0.16);
+  border: 2px solid #ff2e5c;
+  color: #ff8aa3;
+  box-shadow: 0 0 10px rgba(255, 46, 92, 0.3);
 }
 
 .confirm-yes:hover {
-  background: #b91c1c;
+  background: rgba(255, 46, 92, 0.28);
+  box-shadow: 0 0 18px rgba(255, 46, 92, 0.55);
   transform: scale(1.05);
 }
 
 .confirm-no {
-  background: #6b7280;
-  color: white;
+  background: rgba(0, 246, 255, 0.12);
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 246, 255, 0.3);
 }
 
 .confirm-no:hover {
-  background: #4b5563;
+  background: rgba(0, 246, 255, 0.22);
+  box-shadow: 0 0 16px rgba(0, 246, 255, 0.5);
   transform: scale(1.05);
 }
 
@@ -4338,4 +4307,2310 @@ h5, h6 {
   .ld-vinculum {
     padding: 3px 10px 4px 6px;
   }
+}
+
+/* ======================================================================
+   ARCADE CABINET THEME - Title screen & Mode Select only.
+   Everything below is scoped under .arcade-theme so it cannot leak into
+   the in-game quiz UI, results, teacher portal, or multiplayer screens.
+   ====================================================================== */
+
+.arcade-theme,
+.arcade-theme *,
+.arcade-theme *::before,
+.arcade-theme *::after {
+  box-sizing: border-box;
+}
+
+.arcade-theme {
+  --arcade-bg-deep: #0a0618;
+  --arcade-bg-mid: #170f34;
+  --arcade-neon-pink: #ff2e9a;
+  --arcade-neon-cyan: #00f6ff;
+  --arcade-neon-yellow: #ffe600;
+  --arcade-neon-purple: #b026ff;
+  --arcade-neon-green: #39ff14;
+  --arcade-neon-orange: #ff8a00;
+  --arcade-text: #f5f0ff;
+  --font-arcade-display: 'Press Start 2P', 'Courier New', monospace;
+  --font-arcade-body: 'VT323', 'Courier New', monospace;
+  padding: 20px 0 !important;
+}
+
+/* Full-bleed dark starfield/grid behind the cabinet, replacing the site's
+   bright gradient background for these two screens only. */
+.arcade-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at 50% 20%, var(--arcade-bg-mid) 0%, var(--arcade-bg-deep) 65%);
+  overflow: hidden;
+}
+
+.arcade-bg-stars {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20% 30%, rgba(255,255,255,0.9) 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 70% 15%, rgba(255,255,255,0.7) 50%, transparent 100%),
+    radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.8) 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 85% 60%, rgba(255,255,255,0.6) 50%, transparent 100%),
+    radial-gradient(1px 1px at 10% 85%, rgba(255,255,255,0.7) 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 60% 45%, rgba(255,255,255,0.5) 50%, transparent 100%),
+    radial-gradient(1px 1px at 90% 90%, rgba(255,255,255,0.9) 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 30% 55%, rgba(255,255,255,0.6) 50%, transparent 100%);
+  background-repeat: repeat;
+  background-size: 400px 400px;
+  animation: arcadeStarDrift 90s linear infinite;
+}
+
+@keyframes arcadeStarDrift {
+  from { background-position: 0 0; }
+  to { background-position: -400px 400px; }
+}
+
+.arcade-bg-grid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 45%;
+  background-image:
+    linear-gradient(rgba(255, 46, 154, 0.35) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 246, 255, 0.25) 1px, transparent 1px);
+  background-size: 48px 48px;
+  transform: perspective(300px) rotateX(60deg);
+  transform-origin: bottom;
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+  mask-image: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+}
+
+/* --- CRT cabinet bezel --- */
+
+.crt-frame {
+  position: relative;
+  z-index: 1;
+  width: 94%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 14px 14px 26px;
+  border-radius: 32px / 24px;
+  background: linear-gradient(155deg, #3a3648 0%, #1c1a26 45%, #100e17 100%);
+  box-shadow:
+    0 25px 60px rgba(0, 0, 0, 0.55),
+    inset 0 2px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Mode-select gets a much roomier cabinet on desktop - the title screen
+   stays a classic narrow cabinet, but stage-select is the "game board"
+   and reads as cramped if it's squeezed into the same width. */
+.crt-frame--wide {
+  max-width: 560px;
+}
+
+@media (min-width: 700px) {
+  .crt-frame--wide {
+    max-width: 900px;
+  }
+}
+
+@media (min-width: 1000px) {
+  .crt-frame--wide {
+    max-width: 1180px;
+  }
+}
+
+.pixel-icon {
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* .pixel-icon defaults to block for the main-menu/card icons it was built
+   for (stacked above a title, inside a flex column that blockifies it
+   anyway). But most .pixel-icon usage is a PixelIcon dropped into a plain
+   pill button (.submit-button, .back-button, .done-button, confirm
+   buttons) alongside its label - there, .pixel-icon's block default forces
+   it onto its own line with almost no gap above the text instead of
+   sitting beside it like every stroke-icon button in the app. Flex-column
+   card buttons are unaffected: a flex item's outer display is blockified
+   regardless, so this only changes behavior in non-flex button contexts. */
+.btn-icon.pixel-icon {
+  display: inline-block;
+}
+
+.crt-frame::before {
+  /* faint bezel screws / speaker grille dots for cabinet texture */
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 26px / 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.crt-screen {
+  position: relative;
+  border-radius: 18px / 14px;
+  overflow: hidden;
+  background: #05030c;
+  /* Edge vignette via inset box-shadow rather than a radial-gradient overlay -
+     a gradient sized to the whole box blacks out the middle on tall
+     scrolling screens (e.g. the stage-select grid); an inset shadow only
+     ever darkens a fixed band near the edges, regardless of content height. */
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.6),
+    inset 0 0 50px rgba(0, 0, 0, 0.85);
+  animation: crtFlicker 6s ease-in-out infinite;
+}
+
+.crt-screen::before {
+  /* scanlines */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.18) 0px,
+    rgba(0, 0, 0, 0.18) 1px,
+    transparent 2px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+}
+
+@keyframes crtFlicker {
+  0%, 96%, 100% { opacity: 1; }
+  97% { opacity: 0.96; }
+  98% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt-screen,
+  .arcade-bg-stars,
+  .insert-coin-prompt,
+  .attract-marquee {
+    animation: none !important;
+  }
+}
+
+/* --- Shared arcade typography / chrome --- */
+
+.arcade-theme .menu-container.arcade {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+  padding: 36px 22px 28px;
+  color: var(--arcade-text);
+  font-family: var(--font-arcade-body);
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.arcade-marquee {
+  font-family: var(--font-arcade-display);
+  font-size: 1.5rem;
+  line-height: 1.6;
+  letter-spacing: 1px;
+  color: var(--arcade-neon-yellow);
+  text-align: center;
+  margin: 0 0 18px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  text-shadow:
+    0 0 6px var(--arcade-neon-yellow),
+    0 0 18px var(--arcade-neon-orange),
+    0 0 36px rgba(255, 138, 0, 0.5);
+  animation: arcadeMarqueeGlow 2.6s ease-in-out infinite;
+}
+
+@media (min-width: 700px) {
+  .arcade-marquee {
+    font-size: 2.6rem;
+    margin-bottom: 24px;
+  }
+}
+
+@media (min-width: 1000px) {
+  .arcade-marquee {
+    font-size: 3.2rem;
+  }
+}
+
+.arcade-marquee.small {
+  display: block;
+  font-size: 1.1rem;
+  color: var(--arcade-neon-cyan);
+  text-shadow:
+    0 0 6px var(--arcade-neon-cyan),
+    0 0 18px var(--arcade-neon-purple),
+    0 0 32px rgba(176, 38, 255, 0.5);
+}
+
+@keyframes arcadeMarqueeGlow {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
+}
+
+.arcade-theme .arcade-subtitle {
+  font-family: var(--font-arcade-body);
+  font-size: 1.3rem;
+  text-align: center;
+  color: var(--arcade-neon-cyan);
+  letter-spacing: 0.5px;
+  margin: 0 0 24px;
+}
+
+@media (min-width: 700px) {
+  .arcade-theme .arcade-subtitle {
+    font-size: 1.7rem;
+    margin-bottom: 32px;
+  }
+}
+
+/* The title screen's name-entry form stays a comfortable reading width even
+   inside the wide cabinet frame - the marquee/attract content above it is
+   what fills the extra space, not a stretched-out form. */
+.arcade-theme .name-input-container {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+@media (min-width: 700px) {
+  .arcade-theme .name-input-container {
+    max-width: 560px;
+    gap: 14px;
+  }
+
+  .arcade-theme .name-input-container label {
+    font-size: 1.5rem;
+  }
+
+  .arcade-theme .name-guidelines p {
+    font-size: 1.15rem;
+  }
+
+  .arcade-theme .name-input,
+  .arcade-theme .teacher-select {
+    font-size: 1.5rem;
+    padding: 16px 18px;
+  }
+
+  .arcade-theme .submit-button.enter-kingdom-button {
+    font-size: 1.1rem;
+    padding: 22px 24px;
+  }
+}
+
+/* --- Title / attract screen --- */
+
+.attract-mode {
+  position: relative;
+  z-index: 1;
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 32px 20px;
+  cursor: pointer;
+  color: var(--arcade-text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 700px) {
+  .attract-mode {
+    min-height: 620px;
+    gap: 26px;
+    padding: 48px 20px;
+  }
+}
+
+@media (min-width: 1000px) {
+  .attract-mode {
+    min-height: 760px;
+    gap: 32px;
+  }
+}
+
+.attract-marquee {
+  font-family: var(--font-arcade-display);
+  font-size: 0.65rem;
+  letter-spacing: 3px;
+  color: var(--arcade-neon-pink);
+  text-shadow: 0 0 8px var(--arcade-neon-pink);
+  animation: arcadeMarqueeGlow 1.8s ease-in-out infinite;
+}
+
+@media (min-width: 700px) {
+  .attract-marquee {
+    font-size: 1rem;
+    letter-spacing: 5px;
+  }
+}
+
+.attract-vs {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 3.2rem;
+}
+
+@media (min-width: 700px) {
+  .attract-vs {
+    gap: 28px;
+  }
+}
+
+.attract-monster {
+  display: inline-block;
+  width: 3.2rem;
+  height: 3.2rem;
+  color: var(--arcade-neon-cyan);
+  animation: attractBounceLeft 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px var(--arcade-neon-cyan));
+}
+
+@media (min-width: 700px) {
+  .attract-monster {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+}
+
+@media (min-width: 1000px) {
+  .attract-monster {
+    width: 7rem;
+    height: 7rem;
+  }
+}
+
+.attract-monster--right {
+  color: var(--arcade-neon-pink);
+  animation-name: attractBounceRight;
+  filter: drop-shadow(0 0 10px var(--arcade-neon-pink));
+}
+
+.attract-monster .pixel-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.attract-vs-text {
+  font-family: var(--font-arcade-display);
+  font-size: 1rem;
+  color: var(--arcade-neon-yellow);
+  text-shadow: 0 0 8px var(--arcade-neon-yellow);
+}
+
+@keyframes attractBounceLeft {
+  0%, 100% { transform: translateX(0) rotate(-4deg); }
+  50% { transform: translateX(8px) rotate(4deg); }
+}
+
+@keyframes attractBounceRight {
+  0%, 100% { transform: translateX(0) rotate(4deg); }
+  50% { transform: translateX(-8px) rotate(-4deg); }
+}
+
+.attract-title {
+  font-family: var(--font-arcade-display);
+  font-size: 1.7rem;
+  line-height: 1.7;
+  text-align: center;
+  color: var(--arcade-neon-yellow);
+  text-shadow:
+    0 0 6px var(--arcade-neon-yellow),
+    0 0 20px var(--arcade-neon-orange),
+    3px 3px 0 var(--arcade-neon-purple);
+}
+
+@media (min-width: 700px) {
+  .attract-title {
+    font-size: 2.8rem;
+  }
+}
+
+@media (min-width: 1000px) {
+  .attract-title {
+    font-size: 3.4rem;
+  }
+}
+
+.attract-score {
+  font-family: var(--font-arcade-display);
+  font-size: 1.6rem;
+  color: var(--arcade-neon-green);
+  text-shadow: 0 0 8px var(--arcade-neon-green);
+  letter-spacing: 2px;
+}
+
+@media (min-width: 700px) {
+  .attract-score {
+    font-size: 2.2rem;
+  }
+}
+
+.attract-score::before {
+  content: 'SCORE ';
+  font-size: 0.7rem;
+  color: var(--arcade-text);
+  opacity: 0.7;
+  vertical-align: middle;
+}
+
+.insert-coin-prompt {
+  font-family: var(--font-arcade-display);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 10px var(--arcade-neon-cyan);
+  animation: arcadeBlink 1s step-start infinite;
+}
+
+@media (min-width: 700px) {
+  .insert-coin-prompt {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+  }
+}
+
+@keyframes arcadeBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.attract-tap-hint {
+  font-family: var(--font-arcade-body);
+  font-size: 1.1rem;
+  color: rgba(245, 240, 255, 0.6);
+  letter-spacing: 0.5px;
+}
+
+@media (min-width: 700px) {
+  .attract-tap-hint {
+    font-size: 1.4rem;
+  }
+}
+
+/* --- Title screen: name-entry ("insert coin") form --- */
+
+.arcade-theme .name-input-container label {
+  font-family: var(--font-arcade-body);
+  font-size: 1.25rem;
+  color: var(--arcade-text);
+}
+
+.arcade-theme .name-guidelines p {
+  font-family: var(--font-arcade-body);
+  font-size: 1rem;
+  color: rgba(245, 240, 255, 0.65);
+}
+
+.arcade-theme .name-input,
+.arcade-theme .teacher-select {
+  font-family: var(--font-arcade-body);
+  font-size: 1.3rem;
+  background: #0d0a1c;
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-neon-cyan);
+  box-shadow: 0 0 12px rgba(0, 246, 255, 0.35), inset 0 0 10px rgba(0, 246, 255, 0.1);
+}
+
+.arcade-theme .name-input:focus,
+.arcade-theme .teacher-select:focus {
+  border-color: var(--arcade-neon-yellow);
+  box-shadow: 0 0 16px rgba(255, 230, 0, 0.45), inset 0 0 10px rgba(255, 230, 0, 0.15);
+  outline: none;
+}
+
+.arcade-theme .name-input::placeholder {
+  color: rgba(0, 246, 255, 0.4);
+}
+
+.arcade-theme .name-error {
+  font-family: var(--font-arcade-body);
+  font-size: 1.15rem;
+  color: var(--arcade-neon-orange);
+  background: rgba(255, 138, 0, 0.1);
+  border-color: var(--arcade-neon-orange);
+}
+
+.arcade-theme .submit-button.enter-kingdom-button {
+  font-family: var(--font-arcade-display);
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+  background: linear-gradient(180deg, var(--arcade-neon-orange) 0%, #d94912 100%);
+  border: none;
+  border-radius: 10px;
+  color: #1a0800;
+  padding: 18px 20px;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: normal;
+  line-height: 1.5;
+  box-shadow:
+    0 6px 0 #a33608,
+    0 10px 18px rgba(255, 138, 0, 0.4);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.arcade-theme .submit-button.enter-kingdom-button:hover:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    0 4px 0 #a33608,
+    0 8px 14px rgba(255, 138, 0, 0.45);
+}
+
+.arcade-theme .submit-button.enter-kingdom-button:disabled {
+  background: #3a3648;
+  color: rgba(245, 240, 255, 0.4);
+  box-shadow: 0 6px 0 #241f30;
+}
+
+.arcade-theme .version-footer {
+  font-family: var(--font-arcade-body);
+  margin-top: 20px;
+}
+
+.arcade-theme .version-footer .version-link,
+.arcade-theme .version-footer .copyright-text {
+  color: rgba(245, 240, 255, 0.55);
+  font-size: 1.05rem;
+}
+
+.arcade-theme .version-footer .version-link:hover {
+  color: var(--arcade-neon-cyan);
+}
+
+/* --- Mode select ("Stage Select") --- */
+
+/* Compact version of the attract-mode/name-entry "MULTIPLY MONSTERS" logo
+   lockup, sized down to sit as a persistent header above the mode grid
+   instead of dominating the screen the way the full splash title does. */
+.menu-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  animation: arcadeMarqueeGlow 2.6s ease-in-out infinite;
+}
+
+.menu-logo-monster {
+  display: inline-block;
+  width: 2rem;
+  height: 2rem;
+  color: var(--arcade-neon-cyan);
+  filter: drop-shadow(0 0 8px var(--arcade-neon-cyan));
+}
+
+.menu-logo-monster--right {
+  color: var(--arcade-neon-pink);
+  filter: drop-shadow(0 0 8px var(--arcade-neon-pink));
+}
+
+.menu-logo-monster .pixel-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.menu-logo-title {
+  font-family: var(--font-arcade-display);
+  font-size: 1rem;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--arcade-neon-yellow);
+  text-shadow:
+    0 0 6px var(--arcade-neon-yellow),
+    0 0 16px var(--arcade-neon-orange),
+    0 0 30px rgba(255, 138, 0, 0.45);
+}
+
+@media (min-width: 700px) {
+  .menu-logo { gap: 16px; margin-bottom: 14px; }
+  .menu-logo-monster { width: 3rem; height: 3rem; }
+  .menu-logo-title { font-size: 1.5rem; }
+}
+
+@media (min-width: 1000px) {
+  .menu-logo-title { font-size: 1.8rem; }
+}
+
+.stage-select-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.player-tag {
+  font-family: var(--font-arcade-display);
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  color: #05030c;
+  background: var(--arcade-neon-green);
+  padding: 5px 8px;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+}
+
+/* Section headers styled as a classic arcade "stage select" banner -
+   centered label flanked by glowing dividers, instead of a plain
+   left-aligned heading sitting above centered content. */
+.arcade-theme .section-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  font-family: var(--font-arcade-display);
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  color: var(--arcade-neon-pink);
+  text-shadow: 0 0 6px var(--arcade-neon-pink);
+  text-align: center;
+  margin: 0 0 20px;
+}
+
+.arcade-theme .section-title::before,
+.arcade-theme .section-title::after {
+  content: '';
+  flex: 1 1 auto;
+  max-width: 140px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  box-shadow: 0 0 8px currentColor;
+}
+
+.arcade-theme .mode-section + .mode-section {
+  margin-top: 34px;
+}
+
+.arcade-theme .game-modes-grid {
+  gap: 8px;
+}
+
+.arcade-theme .mode-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 20px;
+  justify-content: stretch;
+}
+
+@media (min-width: 700px) {
+  .arcade-theme .mode-cards {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 26px;
+  }
+}
+
+.arcade-theme .mode-card {
+  width: auto;
+  height: auto;
+  min-height: 220px;
+  padding: 28px 20px;
+  gap: 16px;
+  background: linear-gradient(160deg, #201a38 0%, #120c22 100%);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  color: var(--arcade-text);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.5), 0 6px 14px rgba(0, 0, 0, 0.4);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+@media (min-width: 700px) {
+  .arcade-theme .mode-card {
+    min-height: 260px;
+    padding: 34px 24px;
+  }
+}
+
+.arcade-theme .mode-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--arcade-neon-cyan);
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.5), 0 0 22px rgba(0, 246, 255, 0.35);
+}
+
+.arcade-theme .mode-card:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+.arcade-theme .card-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0;
+}
+
+@media (min-width: 700px) {
+  .arcade-theme .card-icon {
+    width: 68px;
+    height: 68px;
+  }
+}
+
+.arcade-theme .card-icon .pixel-icon {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.arcade-theme .card-content h4 {
+  font-family: var(--font-arcade-display);
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  line-height: 1.6;
+  color: var(--arcade-text);
+  margin-bottom: 8px;
+}
+
+@media (min-width: 700px) {
+  .arcade-theme .card-content h4 {
+    font-size: 0.95rem;
+  }
+}
+
+.arcade-theme .card-content p {
+  font-family: var(--font-arcade-body);
+  font-size: 1.15rem;
+  color: rgba(245, 240, 255, 0.6);
+}
+
+.arcade-theme .mode-card.training { border-color: rgba(57, 255, 20, 0.3); }
+.arcade-theme .mode-card.training .card-icon { color: var(--arcade-neon-green); }
+
+.arcade-theme .mode-card.detective { border-color: rgba(176, 38, 255, 0.3); }
+.arcade-theme .mode-card.detective .card-icon { color: var(--arcade-neon-purple); }
+
+.arcade-theme .mode-card.twodigit { border-color: rgba(0, 246, 255, 0.3); }
+.arcade-theme .mode-card.twodigit .card-icon { color: var(--arcade-neon-cyan); }
+
+.arcade-theme .mode-card.division { border-color: rgba(255, 230, 0, 0.3); }
+.arcade-theme .mode-card.division .card-icon { color: var(--arcade-neon-yellow); }
+
+.arcade-theme .mode-card.timed { border-color: rgba(255, 138, 0, 0.3); }
+.arcade-theme .mode-card.timed .card-icon { color: var(--arcade-neon-orange); }
+
+.arcade-theme .mode-card.advanced { border-color: rgba(255, 46, 154, 0.3); }
+.arcade-theme .mode-card.advanced .card-icon { color: var(--arcade-neon-pink); }
+
+.arcade-theme .mode-card.multiplayer { border-color: rgba(0, 246, 255, 0.3); }
+.arcade-theme .mode-card.multiplayer .card-icon { color: var(--arcade-neon-cyan); }
+
+.arcade-theme .mode-card.squad { border-color: rgba(255, 46, 154, 0.3); }
+.arcade-theme .mode-card.squad .card-icon { color: var(--arcade-neon-pink); }
+
+.arcade-theme .division-toggle .toggle-label {
+  font-family: var(--font-arcade-body);
+  font-size: 1.1rem;
+  color: rgba(245, 240, 255, 0.85);
+  background: #1a1530;
+  border: 1px solid rgba(0, 246, 255, 0.25);
+}
+
+.arcade-theme .division-toggle .toggle-label:hover {
+  background: #241d3d;
+}
+
+.arcade-theme .toggle-slider {
+  background: #3a3352;
+  border: 1px solid rgba(0, 246, 255, 0.3);
+}
+
+.arcade-theme .toggle-label input[type="checkbox"]:checked + .toggle-slider {
+  background: var(--arcade-neon-green);
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.6);
+}
+
+.arcade-theme .feedback-fab {
+  z-index: 20;
+}
+
+@media (max-width: 480px) {
+  .crt-frame {
+    width: 100%;
+    padding: 10px 8px 18px;
+    border-radius: 24px / 18px;
+  }
+
+  .arcade-marquee { font-size: 1.15rem; }
+  .attract-title { font-size: 1.3rem; }
+  .attract-vs { font-size: 2.4rem; }
+}
+
+
+/* ============================================
+   TRAINING MODE — LASER BATTLE ARENA
+   ============================================ */
+.training-arcade {
+  --arcade-bg-deep: #0a0618;
+  --arcade-bg-mid: #170f34;
+  --arcade-neon-pink: #ff2e9a;
+  --arcade-neon-cyan: #00f6ff;
+  --arcade-neon-yellow: #ffe600;
+  --arcade-neon-purple: #b026ff;
+  --arcade-neon-green: #39ff14;
+  --arcade-neon-orange: #ff8a00;
+  --arcade-text: #f5f0ff;
+  --font-arcade-display: 'Press Start 2P', 'Courier New', monospace;
+  --font-arcade-body: 'VT323', 'Courier New', monospace;
+
+  background: var(--arcade-bg-deep);
+  border-radius: 24px;
+  border: 3px solid var(--arcade-neon-cyan);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(0, 246, 255, 0.4),
+    inset 0 0 50px rgba(0, 0, 0, 0.6);
+  padding: 32px;
+  max-width: 640px;
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.training-arcade-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.training-arcade-bg .arcade-bg-stars,
+.training-arcade-bg .arcade-bg-grid {
+  position: absolute;
+  inset: 0;
+}
+
+.training-arcade::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 2px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.training-arcade .game-header {
+  position: relative;
+  background: transparent;
+  box-shadow: none;
+  margin-bottom: 16px;
+}
+
+.training-arcade .compact-game-stats {
+  justify-content: center;
+  gap: 20px;
+}
+
+.training-arcade .compact-game-stats .score,
+.training-arcade .compact-game-stats .timer,
+.training-arcade .compact-game-stats .session-indicator {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-yellow);
+  box-shadow: 0 0 10px rgba(255, 230, 0, 0.35);
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-yellow);
+  text-shadow: 0 0 6px var(--arcade-neon-yellow);
+  font-size: 1.4rem;
+  padding: 6px 16px;
+  border-radius: 8px;
+}
+
+.training-arcade .compact-game-stats .timer {
+  border-color: var(--arcade-neon-orange);
+  color: var(--arcade-neon-orange);
+  text-shadow: 0 0 6px var(--arcade-neon-orange);
+  box-shadow: 0 0 10px rgba(255, 138, 0, 0.35);
+}
+
+.training-arcade .compact-game-stats .streak {
+  color: var(--arcade-neon-pink);
+}
+
+.training-arcade .question-container {
+  position: relative;
+  z-index: 1;
+  background: rgba(23, 15, 52, 0.55);
+  border: 2px solid var(--arcade-neon-purple);
+  border-radius: 16px;
+  box-shadow: inset 0 0 24px rgba(176, 38, 255, 0.25);
+  padding: 30px 26px;
+}
+
+.training-arcade .question {
+  font-family: var(--font-arcade-display);
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 8px var(--arcade-neon-cyan);
+  font-size: 1.5rem;
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+}
+
+.training-arcade .answer-input {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-text);
+  font-family: var(--font-arcade-body);
+  font-size: 1.6rem;
+}
+
+.training-arcade .answer-input:focus {
+  border-color: var(--arcade-neon-yellow);
+  box-shadow: 0 0 12px var(--arcade-neon-yellow);
+}
+
+.training-arcade .submit-button {
+  font-family: var(--font-arcade-display);
+  font-size: 0.9rem;
+  background: rgba(255, 46, 154, 0.18);
+  border: 2px solid var(--arcade-neon-pink);
+  color: var(--arcade-neon-pink);
+  text-shadow: 0 0 6px rgba(255, 46, 154, 0.4);
+  box-shadow: 0 0 14px rgba(255, 46, 154, 0.35);
+  letter-spacing: 1px;
+  height: auto;
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+/* Battle-type badge (e.g. "Quick Clash"/"Survival Mode") in the squad live
+   arena's header - matches the score/timer badges next to it. */
+.training-arcade .compact-game-stats .battle-type {
+  background: rgba(255, 46, 154, 0.14);
+  border: 2px solid var(--arcade-neon-pink);
+  box-shadow: 0 0 10px rgba(255, 46, 154, 0.3);
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-pink);
+  text-shadow: 0 0 6px var(--arcade-neon-pink);
+  font-size: 1.4rem;
+  padding: 6px 16px;
+  border-radius: 8px;
+}
+
+.training-arcade .submit-button:hover {
+  background: rgba(255, 46, 154, 0.3);
+  box-shadow: 0 0 20px rgba(255, 46, 154, 0.55);
+}
+
+.training-arcade .feedback {
+  background: rgba(10, 6, 24, 0.6);
+  border: 2px solid var(--arcade-neon-green);
+}
+
+.training-arcade .feedback.correct {
+  border-color: var(--arcade-neon-green);
+  box-shadow: inset 0 0 20px rgba(57, 255, 20, 0.2);
+}
+
+.training-arcade .feedback.incorrect {
+  border-color: var(--arcade-neon-orange);
+  box-shadow: inset 0 0 20px rgba(255, 138, 0, 0.2);
+}
+
+.training-arcade .feedback.correct .feedback-message {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-green);
+  text-shadow: 0 0 8px var(--arcade-neon-green);
+  font-size: 1.4rem;
+}
+
+.training-arcade .feedback.incorrect .feedback-message {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-orange);
+  text-shadow: 0 0 8px var(--arcade-neon-orange);
+  font-size: 1.4rem;
+}
+
+.training-arcade .feedback .correct-answer {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+  font-size: 1.15rem;
+}
+
+.training-arcade .game-controls {
+  position: relative;
+  z-index: 1;
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+.training-arcade .back-button {
+  font-family: var(--font-arcade-body);
+  font-size: 1.15rem;
+  background: rgba(0, 246, 255, 0.12);
+  color: var(--arcade-neon-cyan);
+  border: 2px solid var(--arcade-neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 246, 255, 0.3);
+}
+
+.training-arcade .back-button:hover {
+  background: rgba(0, 246, 255, 0.22);
+  box-shadow: 0 0 16px rgba(0, 246, 255, 0.5);
+}
+
+.training-arcade .done-button {
+  font-family: var(--font-arcade-display);
+  font-size: 0.9rem;
+  background: rgba(255, 46, 154, 0.18);
+  border: 2px solid var(--arcade-neon-pink);
+  color: var(--arcade-neon-pink);
+  text-shadow: 0 0 6px rgba(255, 46, 154, 0.4);
+  box-shadow: 0 0 14px rgba(255, 46, 154, 0.35);
+  letter-spacing: 1px;
+}
+
+.training-arcade .done-button:hover {
+  background: rgba(255, 46, 154, 0.3);
+  box-shadow: 0 0 20px rgba(255, 46, 154, 0.55);
+}
+
+.training-arcade .quit-link {
+  font-family: var(--font-arcade-body);
+  font-size: 1rem;
+  color: rgba(245, 240, 255, 0.45);
+  text-decoration: underline;
+}
+
+.training-arcade .quit-link:hover {
+  color: var(--arcade-text);
+  background: none;
+}
+
+.training-arcade .detective-progress {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-yellow);
+  box-shadow: 0 0 10px rgba(255, 230, 0, 0.35);
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-yellow);
+  text-shadow: 0 0 6px var(--arcade-neon-yellow);
+  font-size: 1.4rem;
+}
+
+.training-arcade .detective-clue-container {
+  position: relative;
+  z-index: 1;
+}
+
+.training-arcade .detective-clue {
+  font-family: var(--font-arcade-body);
+  background: rgba(23, 15, 52, 0.55);
+  border: 2px solid var(--arcade-neon-purple);
+  box-shadow: inset 0 0 24px rgba(176, 38, 255, 0.25);
+  color: var(--arcade-text);
+  font-size: 1.3rem;
+}
+
+.training-arcade .detective-input {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-text);
+  font-family: var(--font-arcade-body);
+  font-size: 1.6rem;
+}
+
+.training-arcade .detective-input:focus {
+  border-color: var(--arcade-neon-yellow);
+  box-shadow: 0 0 12px var(--arcade-neon-yellow);
+}
+
+.training-arcade .detective-input.prefilled {
+  background: rgba(57, 255, 20, 0.12);
+  border-color: var(--arcade-neon-green);
+  color: var(--arcade-neon-green);
+  box-shadow: 0 0 12px rgba(57, 255, 20, 0.3);
+}
+
+.training-arcade .multiplication-symbol {
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 6px var(--arcade-neon-cyan);
+}
+
+.training-arcade .twodigit-progress {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-yellow);
+  box-shadow: 0 0 10px rgba(255, 230, 0, 0.35);
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-yellow);
+  text-shadow: 0 0 6px var(--arcade-neon-yellow);
+}
+
+.training-arcade .work-area {
+  background: rgba(23, 15, 52, 0.55);
+  border: 3px solid var(--arcade-neon-purple);
+  box-shadow: inset 0 0 24px rgba(176, 38, 255, 0.25);
+}
+
+.training-arcade .times-symbol-work {
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 6px var(--arcade-neon-cyan);
+}
+
+.training-arcade .digit-display {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--arcade-text);
+}
+
+.training-arcade .digit-display.placeholder-zero {
+  background: rgba(176, 38, 255, 0.12);
+  color: var(--arcade-neon-purple);
+}
+
+.training-arcade .digit-input {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-text);
+}
+
+.training-arcade .digit-input:focus {
+  border-color: var(--arcade-neon-yellow);
+  box-shadow: 0 0 12px var(--arcade-neon-yellow);
+}
+
+.training-arcade .carry-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--arcade-neon-cyan);
+  color: var(--arcade-text);
+}
+
+.training-arcade .carry-input:focus {
+  border-color: var(--arcade-neon-yellow);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 10px rgba(255, 230, 0, 0.3);
+}
+
+.training-arcade .work-line {
+  background: var(--arcade-neon-purple);
+  box-shadow: 0 0 8px var(--arcade-neon-purple);
+}
+
+.training-arcade .long-division .quotient-input {
+  color: var(--arcade-text);
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-cyan);
+}
+
+.training-arcade .long-division .quotient-input:focus {
+  border-color: var(--arcade-neon-yellow);
+  box-shadow: 0 0 12px var(--arcade-neon-yellow);
+}
+
+.training-arcade .ld-divisor,
+.training-arcade .ld-bracket,
+.training-arcade .ld-dividend {
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 6px var(--arcade-neon-cyan);
+}
+
+.training-arcade .ld-vinculum {
+  border-top-color: var(--arcade-neon-cyan);
+}
+
+/* --- Results screens: shared arcade skin ---
+   Applied to .results-container across the three results screens (solo
+   'results', 'multiplayerResults', 'squadResults') via the .results-arcade
+   class, layered on top of .training-arcade for the dark card/background
+   and CSS variables. Only colors/fonts are overridden here - layout
+   (flex/grid/padding) is left to each element's base rule so this stays a
+   reskin, not a rebuild. */
+.results-arcade {
+  max-width: 760px;
+  text-align: center;
+}
+
+.results-arcade h1 {
+  font-family: var(--font-arcade-display);
+  font-size: 1.3rem;
+  line-height: 1.7;
+  letter-spacing: 1px;
+  color: var(--arcade-neon-yellow);
+  text-shadow: 0 0 10px var(--arcade-neon-yellow);
+  margin: 0 0 20px 0;
+}
+
+.results-arcade h2 {
+  font-family: var(--font-arcade-body);
+  font-size: 1.5rem;
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 8px var(--arcade-neon-cyan);
+}
+
+.results-arcade h3,
+.results-arcade h4 {
+  font-family: var(--font-arcade-body);
+  font-size: 1.25rem;
+  color: var(--arcade-text);
+}
+
+.results-arcade p {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+/* Card-level wrappers */
+.results-arcade .current-results,
+.results-arcade .score-history,
+.results-arcade .results-header,
+.results-arcade .battle-summary,
+.results-arcade .result-card,
+.results-arcade .winner-announcement,
+.results-arcade .final-leaderboard {
+  background: rgba(23, 15, 52, 0.55);
+  border: 2px solid var(--arcade-neon-purple);
+  border-radius: 16px;
+  box-shadow: inset 0 0 24px rgba(176, 38, 255, 0.25);
+}
+
+/* Row-level items: one result/history/leaderboard/roster entry */
+.results-arcade .result-item,
+.results-arcade .history-item,
+.results-arcade .leaderboard-item,
+.results-arcade .final-result-entry,
+.results-arcade .stat-box {
+  background: #120a28 !important;
+  border: 2px solid var(--arcade-neon-cyan) !important;
+  box-shadow: 0 0 8px rgba(0, 246, 255, 0.25) !important;
+}
+
+.results-arcade .leaderboard-item.current-player,
+.results-arcade .final-result-entry.winner,
+.results-arcade .final-result-entry.podium {
+  border-color: var(--arcade-neon-yellow) !important;
+  box-shadow: 0 0 14px rgba(255, 230, 0, 0.4) !important;
+  transform: none;
+}
+
+.results-arcade .result-label,
+.results-arcade .stat-label,
+.results-arcade .history-date,
+.results-arcade .final-player-info h4,
+.results-arcade .player-name,
+.results-arcade .rank-text,
+.results-arcade .battle-details h2,
+.results-arcade .result-card h2,
+.results-arcade .final-leaderboard h2,
+.results-arcade .final-leaderboard h3 {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+.results-arcade .result-value,
+.results-arcade .stat-value,
+.results-arcade .stat-number,
+.results-arcade .history-score,
+.results-arcade .final-score,
+.results-arcade .rank-position,
+.results-arcade .final-rank,
+.results-arcade .stat-item .stat-value {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-green);
+  text-shadow: 0 0 6px var(--arcade-neon-green);
+  background: transparent;
+}
+
+.results-arcade .history-percentage,
+.results-arcade .best-streak {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-orange);
+  text-shadow: 0 0 6px var(--arcade-neon-orange);
+  background: transparent;
+  border-color: var(--arcade-neon-orange);
+}
+
+.results-arcade .session-code,
+.results-arcade .rank-badge {
+  font-family: var(--font-arcade-body);
+  background: #120a28;
+  color: var(--arcade-neon-yellow);
+  border: 2px solid var(--arcade-neon-yellow);
+  box-shadow: 0 0 10px rgba(255, 230, 0, 0.35);
+}
+
+.results-arcade .eliminated-tag {
+  color: rgba(245, 240, 255, 0.5);
+}
+
+.results-arcade .clear-history-button {
+  background: rgba(255, 138, 0, 0.12);
+  border: 2px solid var(--arcade-neon-orange);
+  color: var(--arcade-neon-orange);
+}
+
+.results-arcade .clear-history-button:hover {
+  background: rgba(255, 138, 0, 0.22);
+  box-shadow: 0 0 10px var(--arcade-neon-orange);
+}
+
+.results-arcade .play-again-btn,
+.results-arcade .back-home-btn,
+.results-arcade .mode-button.back,
+.results-arcade .mode-button.teacher,
+.results-arcade .mode-button.student {
+  font-family: var(--font-arcade-body);
+  font-size: 1.1rem;
+  border-radius: 10px;
+}
+
+/* Card buttons that pair a title with a .mode-description sub-line need a
+   bigger title so the two are clearly differentiated instead of reading as
+   the same weight of text. */
+.results-arcade .mode-button.teacher,
+.results-arcade .mode-button.student,
+.results-arcade .mode-button.squad-create,
+.results-arcade .mode-button.squad-join,
+.results-arcade .mode-button.squad-battle-type {
+  font-size: 1.5rem;
+}
+
+/* Every arcade button below shares one standard: a translucent tint of its
+   accent color (never a solid/gradient fill) so button text and the
+   description underneath both stay readable, with a solid-color border and
+   glow doing the rest of the color work. */
+.results-arcade .play-again-btn,
+.results-arcade .mode-button.teacher {
+  background: rgba(255, 46, 154, 0.16);
+  border: 2px solid var(--arcade-neon-pink);
+  color: var(--arcade-neon-pink);
+  box-shadow: 0 0 14px rgba(255, 46, 154, 0.35);
+}
+
+.results-arcade .play-again-btn:hover,
+.results-arcade .mode-button.teacher:hover {
+  background: rgba(255, 46, 154, 0.28);
+  box-shadow: 0 0 20px rgba(255, 46, 154, 0.55);
+}
+
+.results-arcade .back-home-btn,
+.results-arcade .mode-button.back {
+  background: rgba(0, 246, 255, 0.12);
+  color: var(--arcade-neon-cyan);
+  border: 2px solid var(--arcade-neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 246, 255, 0.3);
+}
+
+.results-arcade .back-home-btn:hover,
+.results-arcade .mode-button.back:hover {
+  background: rgba(0, 246, 255, 0.22);
+  box-shadow: 0 0 16px rgba(0, 246, 255, 0.5);
+  transform: none;
+}
+
+/* --- Battle Mode ancillary screens (select/create/join/lobby/monitor) ---
+   Layered on .results-arcade the same way the results screens are, so the
+   whole classroom multiplayer flow shares one skin instead of leaving these
+   setup/monitoring screens on the old light-card design. */
+.results-arcade .session-info,
+.results-arcade .students-list,
+.results-arcade .session-setup,
+.results-arcade .waiting-message,
+.results-arcade .live-leaderboard-monitor {
+  background: rgba(23, 15, 52, 0.55);
+  border: 2px solid var(--arcade-neon-purple);
+  border-radius: 16px;
+  box-shadow: inset 0 0 24px rgba(176, 38, 255, 0.25);
+}
+
+.results-arcade .session-info h2,
+.results-arcade .students-list h3,
+.results-arcade .session-setup h3,
+.results-arcade .live-leaderboard-monitor h3 {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+.results-arcade .waiting-message p {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+  font-size: 1.2rem;
+}
+
+.results-arcade .student-card,
+.results-arcade .leaderboard-entry-monitor {
+  background: #120a28 !important;
+  border: 2px solid var(--arcade-neon-cyan) !important;
+  box-shadow: 0 0 8px rgba(0, 246, 255, 0.25) !important;
+}
+
+.results-arcade .leaderboard-entry-monitor.top-three {
+  border-color: var(--arcade-neon-yellow) !important;
+  box-shadow: 0 0 14px rgba(255, 230, 0, 0.4) !important;
+  transform: none;
+}
+
+.results-arcade .student-name,
+.results-arcade .player-name {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+.results-arcade .student-status {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-green);
+  text-shadow: 0 0 6px var(--arcade-neon-green);
+}
+
+.results-arcade .no-students {
+  color: rgba(245, 240, 255, 0.5);
+}
+
+.results-arcade .score-display,
+.results-arcade .rank {
+  font-family: var(--font-arcade-body);
+  background: transparent;
+  color: var(--arcade-neon-green);
+  text-shadow: 0 0 6px var(--arcade-neon-green);
+}
+
+.results-arcade .percentage-display,
+.results-arcade .streak-display {
+  font-family: var(--font-arcade-body);
+  background: transparent;
+  color: var(--arcade-neon-orange);
+  text-shadow: 0 0 6px var(--arcade-neon-orange);
+}
+
+.results-arcade .session-code-display {
+  font-family: var(--font-arcade-body);
+  background: #120a28;
+  color: var(--arcade-neon-yellow);
+  border: 2px solid var(--arcade-neon-yellow);
+  box-shadow: 0 0 10px rgba(255, 230, 0, 0.35);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.results-arcade .timer-display h2,
+.results-arcade .game-finished h2 {
+  font-family: var(--font-arcade-body);
+  background: #120a28;
+  border-radius: 10px;
+}
+
+.results-arcade .timer-display h2 {
+  color: var(--arcade-neon-orange);
+  border: 2px solid var(--arcade-neon-orange);
+  box-shadow: 0 0 10px rgba(255, 138, 0, 0.35);
+}
+
+.results-arcade .game-finished h2 {
+  color: var(--arcade-neon-green);
+  border: 2px solid var(--arcade-neon-green);
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.35);
+}
+
+/* Setup form controls: mode radios, division toggle, session-code input */
+.results-arcade .mode-option {
+  font-family: var(--font-arcade-body);
+  font-size: 1.1rem;
+  color: rgba(245, 240, 255, 0.85);
+  background: #1a1530;
+  border: 1px solid rgba(0, 246, 255, 0.25);
+}
+
+.results-arcade .mode-option:hover {
+  background: #241d3d;
+}
+
+.results-arcade .division-toggle .toggle-label {
+  font-family: var(--font-arcade-body);
+  font-size: 1.1rem;
+  color: rgba(245, 240, 255, 0.85);
+  background: #1a1530;
+  border: 1px solid rgba(0, 246, 255, 0.25);
+}
+
+.results-arcade .division-toggle .toggle-label:hover {
+  background: #241d3d;
+}
+
+.results-arcade .toggle-slider {
+  background: #3a3352;
+  border: 1px solid rgba(0, 246, 255, 0.3);
+}
+
+.results-arcade .toggle-label input[type="checkbox"]:checked + .toggle-slider {
+  background: var(--arcade-neon-green);
+  box-shadow: 0 0 10px rgba(57, 255, 20, 0.6);
+}
+
+.results-arcade .session-join label {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+.results-arcade .session-code-input {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-text);
+  font-family: var(--font-arcade-body);
+}
+
+.results-arcade .session-code-input:focus {
+  border-color: var(--arcade-neon-yellow);
+  box-shadow: 0 0 12px var(--arcade-neon-yellow);
+}
+
+.results-arcade .mode-description {
+  font-family: var(--font-arcade-body);
+  color: rgba(245, 240, 255, 0.85);
+}
+
+.results-arcade .teacher-guide-link {
+  font-family: var(--font-arcade-body);
+  font-size: 1.1rem;
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 6px rgba(0, 246, 255, 0.4);
+}
+
+/* Big card buttons: mode-button.teacher/student on the Battle Mode select
+   screen reuse the results-arcade pink/cyan button treatment above; student
+   just needs its own cyan variant since teacher's pink is already covered.
+   Translucent tint (not a solid fill) so the light .mode-description text
+   every other card gets stays readable here too, no dark-text override needed. */
+.results-arcade .mode-button.student {
+  background: rgba(0, 246, 255, 0.16);
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-neon-cyan);
+  box-shadow: 0 0 14px rgba(0, 246, 255, 0.35);
+}
+
+.results-arcade .mode-button.student:hover {
+  background: rgba(0, 246, 255, 0.28);
+  box-shadow: 0 0 20px rgba(0, 246, 255, 0.55);
+  color: var(--arcade-neon-cyan);
+}
+
+.results-arcade .mode-button.danger {
+  font-family: var(--font-arcade-body);
+  font-size: 1.1rem;
+  border-radius: 10px;
+  background: rgba(255, 46, 92, 0.16);
+  border: 2px solid #ff2e5c;
+  color: #ff8aa3;
+  box-shadow: 0 0 14px rgba(255, 46, 92, 0.35);
+}
+
+.results-arcade .mode-button.danger:hover {
+  background: rgba(255, 46, 92, 0.28);
+  box-shadow: 0 0 20px rgba(255, 46, 92, 0.55);
+}
+
+/* Pixel-art icons glow like the rest of the neon UI instead of sitting
+   flat on top of these buttons/headings' solid fills and dark cards. */
+.results-arcade .mode-button .pixel-icon,
+.results-arcade .confirm-icon .pixel-icon,
+.results-arcade h1 .pixel-icon,
+.results-arcade h2 .pixel-icon,
+.results-arcade h3 .pixel-icon,
+.results-arcade .rank .pixel-icon,
+.results-arcade .final-rank .pixel-icon {
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* .pixel-icon defaults to display:block for the main-menu card icons, which
+   breaks it onto its own line inside a heading's inline text flow. These
+   headings/rank badges need it inline instead, matching the emoji it replaced. */
+.results-arcade h1 .pixel-icon,
+.results-arcade h2 .pixel-icon,
+.results-arcade h3 .pixel-icon,
+.results-arcade .rank .pixel-icon {
+  display: inline-block;
+  vertical-align: -0.2em;
+}
+
+.results-arcade .mode-button .spin-icon {
+  animation: arcadeIconSpin 0.9s linear infinite;
+}
+
+@keyframes arcadeIconSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* --- Squad Showdown (select/create/join/lobby/results) ---
+   Mirrors the Battle Mode ancillary reskin above, layered on .results-arcade
+   the same way, so Squad Showdown shares one skin instead of the old light
+   "floating monster" design. */
+.results-arcade .squad-code-display,
+.results-arcade .battle-info,
+.results-arcade .players-section,
+.results-arcade .code-input-section {
+  background: rgba(23, 15, 52, 0.55);
+  border: 2px solid var(--arcade-neon-purple);
+  border-radius: 16px;
+  box-shadow: inset 0 0 24px rgba(176, 38, 255, 0.25);
+}
+
+.results-arcade .squad-code-display {
+  padding-bottom: 32px;
+}
+
+.results-arcade .squad-code-display h2,
+.results-arcade .players-section h3,
+.results-arcade .battle-info p,
+.results-arcade .code-input-section label {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+.results-arcade .squad-code-display h2 {
+  font-size: 1.8rem;
+  margin-bottom: 20px;
+}
+
+.results-arcade .code-highlight,
+.results-arcade .squad-code-input {
+  font-family: var(--font-arcade-body);
+  background: #120a28;
+  color: var(--arcade-neon-yellow);
+  border: 2px solid var(--arcade-neon-yellow);
+  box-shadow: 0 0 10px rgba(255, 230, 0, 0.35);
+}
+
+.results-arcade .code-highlight {
+  font-size: 2.6rem;
+  padding: 10px 22px;
+  display: inline-block;
+}
+
+.results-arcade .squad-code-input:focus {
+  box-shadow: 0 0 14px var(--arcade-neon-yellow);
+}
+
+.results-arcade .player-item {
+  background: #120a28 !important;
+  border: 2px solid var(--arcade-neon-cyan) !important;
+  box-shadow: 0 0 8px rgba(0, 246, 255, 0.25) !important;
+}
+
+.results-arcade .player-item.host {
+  border-color: var(--arcade-neon-yellow) !important;
+  box-shadow: 0 0 14px rgba(255, 230, 0, 0.4) !important;
+}
+
+.results-arcade .player-item .player-name {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+.results-arcade .ready-status.ready {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-green);
+  text-shadow: 0 0 6px var(--arcade-neon-green);
+}
+
+.results-arcade .ready-status.not-ready {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-orange);
+  text-shadow: 0 0 6px var(--arcade-neon-orange);
+}
+
+.results-arcade .loading-message {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+.results-arcade .battle-type-display .pixel-icon {
+  width: 3rem;
+  height: 3rem;
+  margin-right: 0;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* Create/start actions reuse the teacher (pink) treatment; join/attack
+   actions reuse the student (cyan) treatment; survival reuses danger (red) -
+   the same action -> color mapping already established for Battle Mode, all
+   using the same translucent-tint-over-dark-card standard (no solid fills). */
+.results-arcade .mode-button.squad-create,
+.results-arcade .mode-button.start-battle,
+.results-arcade .mode-button.squad-battle-type.quick-clash-card {
+  font-family: var(--font-arcade-body);
+  border-radius: 10px;
+  background: rgba(255, 46, 154, 0.16);
+  border: 2px solid var(--arcade-neon-pink);
+  color: var(--arcade-neon-pink);
+  box-shadow: 0 0 14px rgba(255, 46, 154, 0.35);
+}
+
+.results-arcade .mode-button.start-battle {
+  font-size: 1.1rem;
+}
+
+.results-arcade .mode-button.squad-create:hover,
+.results-arcade .mode-button.start-battle:hover:not(:disabled),
+.results-arcade .mode-button.squad-battle-type.quick-clash-card:hover {
+  background: rgba(255, 46, 154, 0.28);
+  box-shadow: 0 0 20px rgba(255, 46, 154, 0.55);
+}
+
+.results-arcade .mode-button.squad-join,
+.results-arcade .mode-button.squad-join-confirm,
+.results-arcade .mode-button.ready-button {
+  font-family: var(--font-arcade-body);
+  border-radius: 10px;
+  background: rgba(0, 246, 255, 0.16);
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-neon-cyan);
+  box-shadow: 0 0 14px rgba(0, 246, 255, 0.35);
+}
+
+.results-arcade .mode-button.squad-join-confirm,
+.results-arcade .mode-button.ready-button {
+  font-size: 1.1rem;
+}
+
+.results-arcade .mode-button.squad-join:hover,
+.results-arcade .mode-button.squad-join-confirm:hover:not(:disabled),
+.results-arcade .mode-button.ready-button:hover {
+  background: rgba(0, 246, 255, 0.28);
+  box-shadow: 0 0 20px rgba(0, 246, 255, 0.55);
+  color: var(--arcade-neon-cyan);
+}
+
+.results-arcade .mode-button.ready-button.ready {
+  background: rgba(57, 255, 20, 0.18);
+  border-color: var(--arcade-neon-green);
+  color: var(--arcade-neon-green);
+  box-shadow: 0 0 14px rgba(57, 255, 20, 0.4);
+}
+
+.results-arcade .mode-button.squad-battle-type.survival-card {
+  font-family: var(--font-arcade-body);
+  border-radius: 10px;
+  background: rgba(255, 46, 92, 0.16);
+  border: 2px solid #ff2e5c;
+  color: #ff8aa3;
+  box-shadow: 0 0 14px rgba(255, 46, 92, 0.35);
+}
+
+.results-arcade .mode-button.squad-battle-type.survival-card:hover {
+  background: rgba(255, 46, 92, 0.28);
+  box-shadow: 0 0 20px rgba(255, 46, 92, 0.55);
+}
+
+.results-arcade .mode-button .button-note {
+  font-family: var(--font-arcade-body);
+  color: rgba(245, 240, 255, 0.7);
+}
+
+/* Squad's live gameplay arena (squadBattle/squadSurvival) reuses the same
+   .game-container.training-arcade skin as solo/Battle Mode gameplay, so its
+   question/answer/feedback/back-button styling comes for free. Only the
+   squad-only leaderboard panel below needs its own dark-card treatment. */
+.training-arcade .squad-leaderboard {
+  background: rgba(23, 15, 52, 0.55);
+  border: 2px solid var(--arcade-neon-purple);
+  border-radius: 16px;
+  box-shadow: inset 0 0 24px rgba(176, 38, 255, 0.25);
+}
+
+.training-arcade .squad-leaderboard h3 {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+  text-align: center;
+}
+
+.training-arcade .live-player-item {
+  background: #120a28 !important;
+  border: 2px solid var(--arcade-neon-cyan) !important;
+  box-shadow: 0 0 8px rgba(0, 246, 255, 0.25) !important;
+}
+
+.training-arcade .live-player-item.rank-1,
+.training-arcade .live-player-item.rank-2,
+.training-arcade .live-player-item.rank-3 {
+  border-color: var(--arcade-neon-yellow) !important;
+  box-shadow: 0 0 14px rgba(255, 230, 0, 0.4) !important;
+}
+
+.training-arcade .live-player-item.eliminated {
+  border-color: rgba(245, 240, 255, 0.2) !important;
+  box-shadow: none !important;
+  opacity: 0.55;
+}
+
+.training-arcade .player-name,
+.training-arcade .rank-badge {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+.training-arcade .live-player-item .rank-badge {
+  background: #120a28;
+  color: var(--arcade-neon-yellow);
+  border: 2px solid var(--arcade-neon-yellow);
+  border-radius: 8px;
+}
+
+.training-arcade .player-stats .score {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-green);
+  text-shadow: 0 0 6px var(--arcade-neon-green);
+}
+
+/* Pixel-icon glow/inline-flow, extended to the squad-only wrappers that
+   reuse rank/host/ready badges instead of the .rank/.final-rank ones the
+   Battle Mode results screens use. */
+.results-arcade .rank-badge .pixel-icon,
+.results-arcade .player-name .pixel-icon,
+.results-arcade .ready-status .pixel-icon,
+.results-arcade .rank-text .pixel-icon,
+.training-arcade .rank-badge .pixel-icon,
+.training-arcade .player-name .pixel-icon {
+  filter: drop-shadow(0 0 4px currentColor);
+  display: inline-block;
+  vertical-align: -0.2em;
+}
+
+/* --- Version history / changelog screen ---
+   Same treatment as the rest of the classroom-multiplayer reskin: card-level
+   wrapper reuses the purple ambient-glow card, per-release entries get their
+   own cyan-bordered row so the newest release still reads as a "card" list. */
+.results-arcade .changelog-container {
+  max-width: none;
+}
+
+.results-arcade .changelog-entry {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-cyan);
+  border-radius: 12px;
+  box-shadow: 0 0 8px rgba(0, 246, 255, 0.25);
+}
+
+.results-arcade .changelog-header {
+  border-bottom: 1px solid rgba(0, 246, 255, 0.25);
+}
+
+.results-arcade .changelog-version {
+  font-family: var(--font-arcade-display);
+  font-size: 1rem;
+  color: var(--arcade-neon-yellow);
+  text-shadow: 0 0 8px var(--arcade-neon-yellow);
+}
+
+.results-arcade .changelog-date {
+  font-family: var(--font-arcade-body);
+  font-size: 1.1rem;
+  background: rgba(0, 246, 255, 0.12);
+  color: var(--arcade-neon-cyan);
+}
+
+.results-arcade .changelog-features {
+  font-family: var(--font-arcade-body);
+  font-size: 1.15rem;
+  color: rgba(245, 240, 255, 0.85);
+}
+
+.results-arcade .changelog-features li::marker {
+  color: var(--arcade-neon-pink);
+}
+
+/* --- Teacher Portal (auth + dashboard) ---
+   Same reskin as everywhere else: translucent cyan pill toggle, the same
+   dark/cyan input treatment the main name-entry screen already uses (just
+   scoped to .results-arcade instead of .arcade-theme), and cyan-bordered
+   dashboard rows matching the player-item/leaderboard-entry-monitor pattern. */
+.results-arcade .teacher-auth-toggle {
+  border: 2px solid var(--arcade-neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 246, 255, 0.25);
+}
+
+.results-arcade .teacher-auth-tab {
+  font-family: var(--font-arcade-body);
+  font-size: 1.15rem;
+  color: rgba(245, 240, 255, 0.7);
+}
+
+.results-arcade .teacher-auth-tab.active {
+  background: rgba(0, 246, 255, 0.2);
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 6px var(--arcade-neon-cyan);
+}
+
+.results-arcade .name-input {
+  font-family: var(--font-arcade-body);
+  font-size: 1.3rem;
+  background: #0d0a1c;
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-neon-cyan);
+  box-shadow: 0 0 12px rgba(0, 246, 255, 0.35), inset 0 0 10px rgba(0, 246, 255, 0.1);
+}
+
+.results-arcade .name-input:focus {
+  border-color: var(--arcade-neon-yellow);
+  box-shadow: 0 0 16px rgba(255, 230, 0, 0.45), inset 0 0 10px rgba(255, 230, 0, 0.15);
+  outline: none;
+}
+
+.results-arcade .name-input::placeholder {
+  color: rgba(0, 246, 255, 0.4);
+}
+
+.results-arcade .name-error {
+  font-family: var(--font-arcade-body);
+  font-size: 1.15rem;
+  color: var(--arcade-neon-orange);
+  background: rgba(255, 138, 0, 0.1);
+  border-color: var(--arcade-neon-orange);
+}
+
+.results-arcade .teacher-report-row {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-cyan);
+  box-shadow: 0 0 8px rgba(0, 246, 255, 0.25);
+}
+
+.results-arcade .teacher-report-date {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-text);
+}
+
+.results-arcade .teacher-report-row .submit-button {
+  height: auto;
+  min-height: auto;
+  padding: 8px 16px;
+  font-size: 1rem;
+}
+
+/* --- Battle arena --- */
+.battle-arena {
+  position: relative;
+  z-index: 1;
+  height: 180px;
+  margin: 0 0 20px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(23, 15, 52, 0.45) 0%, rgba(10, 6, 24, 0.8) 100%);
+  border: 2px solid rgba(0, 246, 255, 0.35);
+  overflow: hidden;
+}
+
+.battle-arena-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(0, 246, 255, 0.3) 0px,
+    rgba(0, 246, 255, 0.3) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+  border-top: 2px solid rgba(0, 246, 255, 0.55);
+}
+
+.laser-cannon {
+  position: absolute;
+  left: 22px;
+  bottom: 30px;
+  width: 46px;
+  height: 46px;
+  z-index: 2;
+  transition: transform 0.08s ease-out;
+}
+
+.laser-cannon.cannon-fire {
+  animation: cannonRecoil 0.25s ease-out;
+}
+
+@keyframes cannonRecoil {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  100% { transform: translateX(0); }
+}
+
+.battle-raygun-icon {
+  width: 100%;
+  height: 100%;
+  color: var(--arcade-neon-cyan);
+  filter: drop-shadow(0 0 8px var(--arcade-neon-cyan));
+}
+
+.muzzle-flash {
+  position: absolute;
+  right: -6px;
+  top: 46%;
+  transform: translateY(-50%) scale(0);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--arcade-neon-yellow) 40%, transparent 75%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.laser-cannon.cannon-fire .muzzle-flash {
+  animation: muzzleFlash 0.3s ease-out;
+}
+
+@keyframes muzzleFlash {
+  0% { transform: translateY(-50%) scale(0); opacity: 1; }
+  35% { transform: translateY(-50%) scale(1.6); opacity: 1; }
+  100% { transform: translateY(-50%) scale(0.4); opacity: 0; }
+}
+
+.laser-beam {
+  position: absolute;
+  left: 68px;
+  right: 92px;
+  top: 70%;
+  height: 9px;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: left center;
+  opacity: 0;
+  border-radius: 5px;
+  z-index: 2;
+}
+
+.laser-beam.laser-fire-hit {
+  background: linear-gradient(90deg, var(--arcade-neon-cyan), #fff 60%, var(--arcade-neon-yellow));
+  box-shadow:
+    0 0 12px 3px var(--arcade-neon-cyan),
+    0 0 24px 6px var(--arcade-neon-yellow);
+  animation: laserFireHit 0.45s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+.laser-beam.laser-fire-miss {
+  right: 30px;
+  background: linear-gradient(90deg, var(--arcade-neon-cyan), #fff 60%, var(--arcade-neon-pink));
+  box-shadow:
+    0 0 12px 3px var(--arcade-neon-cyan),
+    0 0 20px 5px var(--arcade-neon-pink);
+  animation: laserFireMiss 0.5s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+@keyframes laserFireHit {
+  0% { transform: translateY(-50%) scaleX(0); opacity: 1; }
+  45% { transform: translateY(-50%) scaleX(1); opacity: 1; }
+  75% { transform: translateY(-50%) scaleX(1); opacity: 1; }
+  100% { transform: translateY(-50%) scaleX(1); opacity: 0; }
+}
+
+@keyframes laserFireMiss {
+  0% { transform: translateY(-50%) scaleX(0) rotate(0deg); opacity: 1; }
+  45% { transform: translateY(-50%) scaleX(1) rotate(-4deg); opacity: 1; }
+  75% { transform: translateY(-50%) scaleX(1) rotate(-4deg); opacity: 1; }
+  100% { transform: translateY(-50%) scaleX(1) rotate(-4deg); opacity: 0; }
+}
+
+.monster-wrap {
+  position: absolute;
+  right: 30px;
+  bottom: 22px;
+  width: 68px;
+  height: 68px;
+  z-index: 1;
+  animation: monsterBob 1.6s ease-in-out infinite;
+}
+
+.battle-monster-icon {
+  width: 100%;
+  height: 100%;
+  color: var(--monster-color, var(--arcade-neon-green));
+  filter: drop-shadow(0 0 8px var(--monster-color, var(--arcade-neon-green)));
+}
+
+@keyframes monsterBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.monster-wrap.monster-hit {
+  animation: monsterExplode 0.5s ease-out forwards;
+  animation-delay: 0.3s;
+}
+
+.monster-wrap.monster-hit .battle-monster-icon {
+  animation: monsterFlash 0.5s ease-out forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes monsterExplode {
+  0% { transform: scale(1) rotate(0deg); opacity: 1; }
+  20% { transform: scale(1.15) rotate(-6deg); opacity: 1; }
+  40% { transform: scale(0.9) rotate(6deg); opacity: 1; }
+  70% { transform: scale(1.2) rotate(0deg); opacity: 1; }
+  100% { transform: scale(0) rotate(20deg); opacity: 0; }
+}
+
+@keyframes monsterFlash {
+  0%, 15% { filter: brightness(1) drop-shadow(0 0 8px var(--monster-color, var(--arcade-neon-green))); }
+  25% { filter: brightness(3) drop-shadow(0 0 20px #fff); }
+  100% { filter: brightness(1) drop-shadow(0 0 8px var(--monster-color, var(--arcade-neon-green))); }
+}
+
+.impact-flash {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--arcade-neon-yellow) 45%, transparent 75%);
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  animation: impactFlash 0.4s ease-out forwards;
+  animation-delay: 0.3s;
+  pointer-events: none;
+}
+
+@keyframes impactFlash {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+  40% { transform: translate(-50%, -50%) scale(5); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(7); opacity: 0; }
+}
+
+.explosion-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.burst-particle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 6px;
+  background: var(--arcade-neon-yellow);
+  box-shadow: 0 0 6px var(--arcade-neon-orange);
+  border-radius: 1px;
+  animation: particleBurst 0.55s ease-out forwards;
+  animation-delay: calc(0.3s + var(--i) * 0.01s);
+}
+
+@keyframes particleBurst {
+  0% { transform: rotate(calc(var(--i) * 45deg)) translateX(0) scale(1); opacity: 1; }
+  100% { transform: rotate(calc(var(--i) * 45deg)) translateX(38px) scale(0); opacity: 0; }
+}
+
+.monster-wrap.monster-miss {
+  animation: monsterTaunt 0.7s ease-in-out;
+  animation-delay: 0.3s;
+}
+
+@keyframes monsterTaunt {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  15% { transform: translateY(-4px) rotate(-10deg); }
+  35% { transform: translateY(0) rotate(10deg); }
+  55% { transform: translateY(-6px) rotate(-8deg); }
+  75% { transform: translateY(0) rotate(8deg); }
+}
+
+.monster-taunt-bubble {
+  position: absolute;
+  bottom: 100%;
+  right: -10px;
+  margin-bottom: 10px;
+  background: #1a1530;
+  border: 2px solid var(--arcade-neon-pink);
+  color: var(--arcade-text);
+  font-family: var(--font-arcade-body);
+  font-size: 1.05rem;
+  line-height: 1.1;
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 0 10px rgba(255, 46, 154, 0.5);
+  animation: tauntPopIn 0.25s ease-out;
+  animation-delay: 0.3s;
+  animation-fill-mode: backwards;
+  z-index: 3;
+}
+
+.monster-taunt-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 18px;
+  border: 6px solid transparent;
+  border-top-color: var(--arcade-neon-pink);
+}
+
+@keyframes tauntPopIn {
+  0% { transform: scale(0.6) translateY(6px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@media (min-width: 700px) {
+  .training-arcade { max-width: 760px; padding: 40px; }
+  .battle-arena { height: 230px; }
+  .monster-wrap { width: 100px; height: 100px; right: 70px; bottom: 36px; }
+  .laser-cannon { left: 34px; bottom: 44px; width: 62px; height: 62px; }
+  .laser-beam { left: 100px; right: 130px; height: 12px; top: 66%; }
+  .monster-taunt-bubble { font-size: 1.25rem; }
+  .training-arcade .question { font-size: 1.8rem; }
+}
+
+@media (max-width: 480px) {
+  .training-arcade { padding: 20px; }
+  .battle-arena { height: 130px; }
+  .monster-wrap { width: 54px; height: 54px; right: 18px; bottom: 16px; }
+  .laser-cannon { left: 14px; bottom: 20px; width: 36px; height: 36px; }
+  .laser-beam { left: 50px; right: 66px; height: 7px; top: 70%; }
+  .monster-taunt-bubble { font-size: 0.9rem; right: -4px; }
+  .training-arcade .question-container { padding: 22px 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .monster-wrap,
+  .laser-cannon.cannon-fire {
+    animation: none;
+  }
+  .monster-wrap.monster-hit,
+  .monster-wrap.monster-hit .battle-monster-icon,
+  .monster-wrap.monster-miss,
+  .burst-particle,
+  .impact-flash,
+  .muzzle-flash,
+  .laser-beam.laser-fire-hit,
+  .laser-beam.laser-fire-miss {
+    animation: none;
+  }
+}
+
+/* Training screen swaps the whole page backdrop for the arcade starfield
+   instead of the cream gradient / Halloween floaters used elsewhere.
+   Set on <body> (not just .App) so it always covers the full page even
+   when .App's own box falls short of the viewport height. */
+body.training-mode-bg {
+  background: #0a0618;
+  background-attachment: fixed;
+}
+
+.App.training-page {
+  background: #0a0618;
+}
+
+.App.training-page::before,
+.App.training-page::after {
+  display: none;
 }
