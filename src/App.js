@@ -163,6 +163,66 @@ const INCORRECT_FEEDBACK_WORDS = [
   'RESISTED!',
 ];
 
+// ---- Shuffled question deck --------------------------------------------------
+// Drawing each factor independently with replacement repeats facts and produces
+// streaks of the same factor. Instead we deal from a shuffled deck of every
+// unique fact, reshuffling only when it runs out, so every fact appears once
+// before any repeats. Lives in a ref (not state) so timer callbacks always see
+// the current deck.
+
+// Unbiased random integer in [0, max) - rejection sampling avoids modulo bias.
+const secureRandomInt = (max) => {
+  if (window.crypto && window.crypto.getRandomValues) {
+    const limit = Math.floor(0x100000000 / max) * max;
+    const array = new Uint32Array(1);
+    do {
+      window.crypto.getRandomValues(array);
+    } while (array[0] >= limit);
+    return array[0] % max;
+  }
+  return Math.floor(Math.random() * max);
+};
+
+const buildFactDeck = (mode) => {
+  const pairs = new Map();
+  const add = (x, y) => pairs.set(`${Math.min(x, y)}x${Math.max(x, y)}`, [x, y]);
+  if (mode === 'advanced') {
+    // one factor 1-9, the other 1-20
+    for (let small = 1; small <= 9; small++) {
+      for (let large = 1; large <= 20; large++) add(small, large);
+    }
+  } else {
+    for (let x = 1; x <= 12; x++) {
+      for (let y = x; y <= 12; y++) add(x, y);
+    }
+  }
+  const deck = Array.from(pairs.entries());
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = secureRandomInt(i + 1);
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  return deck;
+};
+
+// bagRef.current holds { mode, deck, lastKey }. Returns [a, b] with the order
+// of the two factors randomised.
+const drawFact = (bagRef, mode) => {
+  let bag = bagRef.current;
+  if (!bag || bag.mode !== mode || bag.deck.length === 0) {
+    const lastKey = bag && bag.mode === mode ? bag.lastKey : null;
+    const deck = buildFactDeck(mode);
+    // don't open a fresh deck with the fact we just asked
+    if (lastKey && deck.length > 1 && deck[deck.length - 1][0] === lastKey) {
+      [deck[0], deck[deck.length - 1]] = [deck[deck.length - 1], deck[0]];
+    }
+    bag = { mode, deck, lastKey };
+    bagRef.current = bag;
+  }
+  const [key, [x, y]] = bag.deck.pop();
+  bag.lastKey = key;
+  return secureRandomInt(2) === 0 ? [x, y] : [y, x];
+};
+
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -300,8 +360,23 @@ function AppContent() {
   }, [gameMode, currentTeacher?.uid]);
 
   // App version and changelog
-  const APP_VERSION = 'v5.0.0';
+  const APP_VERSION = 'v5.0.1';
   const CHANGELOG = [
+    {
+      version: 'v5.0.1',
+      date: '09-21-2026',
+      features: [
+        'Fixed the Squad Showdown timer drifting out of sync between players: the countdown now runs off the server start time and no longer pauses on answers, so everyone\'s clock ends together',
+        'Shortened Squad Showdown from 3 minutes to 1 minute',
+        'Fixed blurry titles, numbers, and question text on mobile by removing glow text-shadows at phone widths and snapping pixel-font sizes to crisp multiples',
+        'On mobile, tapping the answer field now scrolls so the question, input, and Fire button are all visible without manual scrolling',
+        'Made the Fire button a full-width pinned button on mobile, and gave the Done button its own cyan style in every mode and screen size',
+        'The answer field now stays focused between questions so the keyboard stays open',
+        'Fixed uneven factor frequency (11s and 12s showing up too often): questions in every mode now come from a shuffled deck, minimizing repeats within a session',
+        'Fixed Detective mode repeating clues and clue types by tracking clue history reliably and using unbiased random numbers',
+        'Multiplayer join codes no longer use the characters 0 and O, which are easy to confuse'
+      ]
+    },
     {
       version: 'v5.0.0',
       date: '09-17-2026',
@@ -509,7 +584,9 @@ function AppContent() {
   const [battleMonsterColor, setBattleMonsterColor] = useState(BATTLE_MONSTER_COLORS[0]);
   const [scoreHistory, setScoreHistory] = useState({ timed: [], advanced: [] });
   const [previousGameMode, setPreviousGameMode] = useState('unlimited');
-  const [usedQuestions, setUsedQuestions] = useState(new Set());
+  const usedCluesRef = useRef(new Set()); // detective clues already shown this session (ref so timer callbacks see current data)
+  const lastClueTypeRef = useRef(null);
+  const factDeckRef = useRef(null); // shuffled deck for generateQuestion / generateDivisionQuestion
   const [includeDivision, setIncludeDivision] = useState(false);
 
   // Multiplayer states
@@ -1217,15 +1294,8 @@ function AppContent() {
     setBattleMonsterColor(BATTLE_MONSTER_COLORS[Math.floor(Math.random() * BATTLE_MONSTER_COLORS.length)]);
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
 
-    // Helper function for better randomization (0-12 range)
-    const getRandomFactor = () => {
-      if (window.crypto && window.crypto.getRandomValues) {
-        const array = new Uint32Array(1);
-        window.crypto.getRandomValues(array);
-        return array[0] % 13; // 0-12
-      }
-      return Math.floor(Math.random() * 13); // 0-12
-    };
+    // Unbiased random factor (0-12)
+    const getRandomFactor = () => secureRandomInt(13);
 
     // For clue types with a "given" number, that number must be non-zero.
     // Otherwise the product is always 0 no matter what the hidden factor
@@ -1233,14 +1303,7 @@ function AppContent() {
     // factor is odd, the other is 0, the product is 0 - what's the odd
     // factor?" has infinitely many valid answers). The hidden/unknown
     // factor can still legitimately be 0.
-    const getRandomFactorNonZero = () => {
-      if (window.crypto && window.crypto.getRandomValues) {
-        const array = new Uint32Array(1);
-        window.crypto.getRandomValues(array);
-        return 1 + (array[0] % 12); // 1-12
-      }
-      return 1 + Math.floor(Math.random() * 12); // 1-12
-    };
+    const getRandomFactorNonZero = () => 1 + secureRandomInt(12); // 1-12
 
     const clueTypes = ['product', 'missingFactor', 'factorRange', 'factorProperty', 'divisionPrep'];
 
@@ -1252,12 +1315,14 @@ function AppContent() {
 
     // Try up to maxAttempts times to produce a clue that hasn't already
     // appeared this session, so the same question doesn't repeat.
-    const maxAttempts = 30;
+    const maxAttempts = 100;
     let attempts = 0;
 
     do {
       attempts++;
-      selectedType = clueTypes[Math.floor(Math.random() * clueTypes.length)];
+      // Avoid the same clue type twice in a row
+      const typePool = clueTypes.filter(t => t !== lastClueTypeRef.current);
+      selectedType = typePool[secureRandomInt(typePool.length)];
       clue = '';
       acceptedAnswers = [];
       prefilledFactor = null;
@@ -1369,11 +1434,12 @@ function AppContent() {
           acceptedAnswers = [[otherFactor, givenFactor]];
         }
       }
-    } while ((!clue || usedQuestions.has(clue)) && attempts < maxAttempts);
+    } while ((!clue || usedCluesRef.current.has(clue)) && attempts < maxAttempts);
 
     if (clue) {
-      setUsedQuestions(prev => new Set([...prev, clue]));
+      usedCluesRef.current.add(clue);
     }
+    lastClueTypeRef.current = selectedType;
 
     setDetectiveClue({ type: selectedType, clue, acceptedAnswers, prefilledFactor, prefilledPosition });
     console.log(`✅ Detective clue generated:`, { type: selectedType, clue, acceptedAnswers });
@@ -1391,72 +1457,8 @@ function AppContent() {
 
   const generateQuestion = () => {
     console.log(`🎲 Generating question for ${userName} (${userRole}) in session ${sessionCode}`);
-    let a, b;
-    let attempts = 0;
-    const maxAttempts = 50; // Prevent infinite loops
-    
-    do {
-      if (gameMode === 'advanced') {
-        // For advanced mode: one factor is 1-9, other is 1-20
-        // Improved randomization: use crypto.getRandomValues when available
-        const getRandomInt = (min, max) => {
-          if (window.crypto && window.crypto.getRandomValues) {
-            const array = new Uint32Array(1);
-            window.crypto.getRandomValues(array);
-            return min + (array[0] % (max - min + 1));
-          }
-          return Math.floor(Math.random() * (max - min + 1)) + min;
-        };
-        
-        const singleDigit = getRandomInt(1, 9);
-        const largerNumber = getRandomInt(1, 20);
-        
-        // Randomly decide which position gets the single digit
-        if (getRandomInt(0, 1) === 0) {
-          a = singleDigit;
-          b = largerNumber;
-        } else {
-          a = largerNumber;
-          b = singleDigit;
-        }
-      } else {
-        // For unlimited and timed modes: both factors 1-12
-        // Improved randomization with better distribution
-        const getRandomFactor = () => {
-          if (window.crypto && window.crypto.getRandomValues) {
-            const array = new Uint32Array(1);
-            window.crypto.getRandomValues(array);
-            return 1 + (array[0] % 12);
-          }
-          return Math.floor(Math.random() * 12) + 1;
-        };
-        
-        a = getRandomFactor();
-        b = getRandomFactor();
-      }
-      
-      attempts++;
-      
-      // For timed games, avoid duplicates within the session
-      const questionKey = `${Math.min(a, b)}x${Math.max(a, b)}`;
-      if ((gameMode === 'timed' || gameMode === 'advanced') && usedQuestions.has(questionKey)) {
-        if (attempts >= maxAttempts) {
-          // If we've tried many times, allow duplicates rather than infinite loop
-          // This handles edge cases where most combinations are exhausted
-          break;
-        }
-        continue; // Try again with different numbers
-      }
-      
-      // Add to used questions for timed games
-      if (gameMode === 'timed' || gameMode === 'advanced') {
-        setUsedQuestions(prev => new Set([...prev, questionKey]));
-      }
-      
-      break; // Found a valid question
-      
-    } while (attempts < maxAttempts);
-    
+    const [a, b] = drawFact(factDeckRef, gameMode === 'advanced' ? 'advanced' : 'standard');
+
     // Decide between multiplication and division when toggle is on
     if (includeDivision && Math.random() < 0.5) {
       // Division: product / factor1 = factor2
@@ -1482,17 +1484,7 @@ function AppContent() {
 
   const generateDivisionQuestion = () => {
     console.log(`➗ Generating division question for ${userName}`);
-    const getRandomFactor = () => {
-      if (window.crypto && window.crypto.getRandomValues) {
-        const array = new Uint32Array(1);
-        window.crypto.getRandomValues(array);
-        return 1 + (array[0] % 12);
-      }
-      return Math.floor(Math.random() * 12) + 1;
-    };
-
-    const factor1 = getRandomFactor();
-    const factor2 = getRandomFactor();
+    const [factor1, factor2] = drawFact(factDeckRef, 'standard');
     const product = factor1 * factor2;
 
     setCurrentQuestion({ a: product, b: factor1, type: 'division' });
@@ -1679,7 +1671,9 @@ function AppContent() {
     setGameMode('unlimited');
     setPreviousGameMode('unlimited');
     setScore({ correct: 0, total: 0 });
-    setUsedQuestions(new Set()); // Clear used questions for new session
+    factDeckRef.current = null;
+    usedCluesRef.current = new Set();
+    lastClueTypeRef.current = null;
     setGameActive(true);
     // A prior round can end mid-animation (e.g. quitting right after a miss,
     // before its auto-clear timeout fires), leaving battleAnim as 'hit'/'miss'.
@@ -1703,7 +1697,9 @@ function AppContent() {
     setPreviousGameMode('timed');
     setScore({ correct: 0, total: 0 });
     setTimeLeft(60);
-    setUsedQuestions(new Set()); // Clear used questions for new session
+    factDeckRef.current = null;
+    usedCluesRef.current = new Set();
+    lastClueTypeRef.current = null;
     
     // Start countdown, then actual game
     startCountdown(() => {
@@ -1733,7 +1729,9 @@ function AppContent() {
     setPreviousGameMode('advanced');
     setScore({ correct: 0, total: 0 });
     setTimeLeft(60);
-    setUsedQuestions(new Set()); // Clear used questions for new session
+    factDeckRef.current = null;
+    usedCluesRef.current = new Set();
+    lastClueTypeRef.current = null;
     
     // Start countdown, then actual game
     startCountdown(() => {
@@ -1761,7 +1759,9 @@ function AppContent() {
     setPreviousGameMode('detective');
     setScore({ correct: 0, total: 0 });
     setDetectiveQuestionCount(1); // Start with question 1
-    setUsedQuestions(new Set()); // Clear used questions for new session
+    factDeckRef.current = null;
+    usedCluesRef.current = new Set();
+    lastClueTypeRef.current = null;
     setGameActive(true);
     // See startUnlimited(): reset leftover battle-arena state from a round
     // that ended mid-animation, so the arena doesn't remount already primed
@@ -1781,7 +1781,9 @@ function AppContent() {
     setPreviousGameMode('twoDigit');
     setScore({ correct: 0, total: 0 });
     setTwoDigitQuestionCount(1); // Start with question 1
-    setUsedQuestions(new Set()); // Clear used questions for new session
+    factDeckRef.current = null;
+    usedCluesRef.current = new Set();
+    lastClueTypeRef.current = null;
     setGameActive(true);
     // See startUnlimited(): reset leftover battle-arena state from a round
     // that ended mid-animation, so the arena doesn't remount already primed
@@ -1800,7 +1802,9 @@ function AppContent() {
     setGameMode('division');
     setPreviousGameMode('division');
     setScore({ correct: 0, total: 0 });
-    setUsedQuestions(new Set());
+    factDeckRef.current = null;
+    usedCluesRef.current = new Set();
+    lastClueTypeRef.current = null;
     setGameActive(true);
     // See startUnlimited(): reset leftover battle-arena state from a round
     // that ended mid-animation, so the arena doesn't remount already primed
@@ -2281,21 +2285,6 @@ function AppContent() {
           });
         }, 1000);
       }
-    } else if (gameMode === 'squadBattle' && gameActive) {
-      // Squad battle mode: countdown timer (not paused by feedback)
-      if (timeLeft > 0) {
-        // Play countdown sounds for last 5 seconds
-        if (timeLeft <= 5 && timeLeft > 1) {
-          playSound('countdown');
-        } else if (timeLeft === 1) {
-          playSound('countdownFinal');
-        }
-        timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      } else if (timeLeft === 0 && gameActive) {
-        setGameActive(false);
-        flushUsageTracking(score, 'completed');
-        // Results will be shown by the component when timeLeft === 0
-      }
     } else if (!isMultiplayer) {
       // Single player mode: use local timer with feedback pausing
       if ((gameMode === 'timed' || gameMode === 'advanced') && timeLeft > 0 && gameActive && !feedback.show) {
@@ -2312,6 +2301,49 @@ function AppContent() {
       }
     };
   }, [gameMode, timeLeft, gameActive, feedback.show, endGame, isMultiplayer, userRole, sessionData, score, flushUsageTracking]);
+
+  // Squad Showdown timer. Derived from the shared server `startedAt`, so every
+  // player's clock ends together no matter how often they answer. (The old
+  // setTimeout chain listed `score` as a dependency, so each correct answer
+  // cleared and restarted the pending 1s tick - fast answerers' clocks ran long.)
+  const squadStartedAtMs = squadData?.startedAt?.toMillis ? squadData.startedAt.toMillis() : null;
+  const squadLocalStartRef = useRef(null);
+  const squadLastSecondRef = useRef(null);
+  const playSoundRef = useRef(playSound);
+  playSoundRef.current = playSound;
+  useEffect(() => {
+    if (gameMode !== 'squadBattle' || !gameActive) {
+      squadLocalStartRef.current = null;
+      squadLastSecondRef.current = null;
+      return undefined;
+    }
+    // startedAt is briefly null while the serverTimestamp is pending
+    if (!squadStartedAtMs && !squadLocalStartRef.current) {
+      squadLocalStartRef.current = Date.now();
+    }
+    const timeLimit = 60;
+    const tick = () => {
+      const start = squadStartedAtMs || squadLocalStartRef.current;
+      const elapsed = Math.floor((Date.now() - start) / 1000);
+      const remaining = Math.max(0, timeLimit - Math.max(0, elapsed));
+      setTimeLeft(remaining);
+      if (squadLastSecondRef.current !== remaining) {
+        squadLastSecondRef.current = remaining;
+        if (remaining <= 5 && remaining > 1) {
+          playSoundRef.current('countdown');
+        } else if (remaining === 1) {
+          playSoundRef.current('countdownFinal');
+        }
+      }
+      if (remaining === 0) {
+        setGameActive(false);
+        flushUsageTracking(score, 'completed');
+      }
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [gameMode, gameActive, squadStartedAtMs, score, flushUsageTracking]);
 
   // Cleanup background music on unmount
   useEffect(() => {
@@ -2354,8 +2386,7 @@ function AppContent() {
       if (timeLeft !== 0) {
         setGameActive(true);
         beginUsageTracking('squadBattle');
-        const timeLimit = squadData?.battleType === 'quickClash' ? 180 : 180;
-        setTimeLeft(timeLimit);
+        setTimeLeft(60);
         generateQuestion();
       }
     }
@@ -3005,7 +3036,7 @@ function AppContent() {
               disabled={isCreatingSquad}
             >
               <PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Quick Clash
-              <span className="mode-description">3 minutes • Fast-paced competition</span>
+              <span className="mode-description">1 minute • Fast-paced competition</span>
             </button>
 
             <button
@@ -3078,7 +3109,7 @@ function AppContent() {
     const getBattleTypeDisplay = () => {
       const type = squadData?.battleType;
       switch (type) {
-        case 'quickClash': return { name: 'Quick Clash', emoji: '⚡', time: '3 minutes' };
+        case 'quickClash': return { name: 'Quick Clash', emoji: '⚡', time: '1 minute' };
         case 'survival': return { name: 'Survival', emoji: '💀', time: 'Until elimination' };
         default: return { name: 'Unknown', emoji: '⚔️', time: '' };
       }
@@ -3389,11 +3420,13 @@ function AppContent() {
           </div>
 
           <div className="question-container">
-            {feedback.show ? (
+            {feedback.show && (
               <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
                 <div className="feedback-message">{feedback.message}</div>
               </div>
-            ) : (
+            )}
+            {/* Inputs stay mounted during feedback (readOnly) so the mobile keyboard stays open */}
+            {(
               <>
                 {currentQuestion.type === 'division' ? (
                   <div className="long-division">
@@ -3406,6 +3439,9 @@ function AppContent() {
                       onKeyPress={handleSquadKeyPress}
                       className="quotient-input"
                       placeholder="?"
+                      onFocus={scrollQuestionIntoView}
+                      readOnly={feedback.show}
+                      enterKeyHint="go"
                       autoFocus
                       disabled={!gameActive || timeLeft === 0}
                     />
@@ -3433,6 +3469,9 @@ function AppContent() {
                       onKeyPress={handleSquadKeyPress}
                       className="answer-input"
                       placeholder="Your answer"
+                      onFocus={scrollQuestionIntoView}
+                      readOnly={feedback.show}
+                      enterKeyHint="go"
                       autoFocus
                       disabled={!gameActive || timeLeft === 0}
                     />
@@ -3441,6 +3480,7 @@ function AppContent() {
                     onClick={handleSquadSubmitAnswer}
                     disabled={!userAnswer.trim() || !gameActive || timeLeft === 0}
                     className="submit-button"
+                    onMouseDown={(e) => e.preventDefault()}
                   >
                     <PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Attack!
                   </button>
@@ -3624,11 +3664,13 @@ function AppContent() {
           </div>
 
           <div className="question-container">
-            {feedback.show ? (
+            {feedback.show && (
               <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
                 <div className="feedback-message">{feedback.message}</div>
               </div>
-            ) : isEliminated ? (
+            )}
+            {/* Inputs stay mounted during feedback (readOnly) so the mobile keyboard stays open */}
+            {isEliminated ? (
               <div className="feedback incorrect">
                 <div className="feedback-message">💀 You've been eliminated!</div>
                 <div className="correct-answer">Watch the remaining players battle it out.</div>
@@ -3651,6 +3693,9 @@ function AppContent() {
                       onKeyPress={handleSurvivalKeyPress}
                       className="quotient-input"
                       placeholder="?"
+                      onFocus={scrollQuestionIntoView}
+                      readOnly={feedback.show}
+                      enterKeyHint="go"
                       autoFocus
                       disabled={isEliminated || gameOver}
                     />
@@ -3678,6 +3723,9 @@ function AppContent() {
                       onKeyPress={handleSurvivalKeyPress}
                       className="answer-input"
                       placeholder="Your answer"
+                      onFocus={scrollQuestionIntoView}
+                      readOnly={feedback.show}
+                      enterKeyHint="go"
                       autoFocus
                       disabled={isEliminated || gameOver}
                     />
@@ -3686,6 +3734,7 @@ function AppContent() {
                     onClick={handleSurvivalSubmitAnswer}
                     disabled={!userAnswer.trim() || isEliminated || gameOver}
                     className="submit-button"
+                    onMouseDown={(e) => e.preventDefault()}
                   >
                     <PixelIcon bitmap={PIXEL_ICONS.raygun} className="btn-icon pixel-icon" /> Attack!
                   </button>
@@ -5121,6 +5170,9 @@ function AppContent() {
                     onKeyPress={handleKeyPress}
                     className="quotient-input"
                     placeholder="?"
+                    onFocus={scrollQuestionIntoView}
+                    readOnly={feedback.show}
+                    enterKeyHint="go"
                     autoFocus
                   />
                   <span className="ld-divisor">{currentQuestion.b}</span>
@@ -5149,7 +5201,7 @@ function AppContent() {
               </div>
             )}
 
-            {!feedback.show && (
+            {(
               <div className="answer-row">
                 {currentQuestion.type !== 'division' && (
                   <input
@@ -5162,10 +5214,13 @@ function AppContent() {
                     onKeyPress={handleKeyPress}
                     className="answer-input"
                     placeholder="Your answer"
+                    onFocus={scrollQuestionIntoView}
+                    readOnly={feedback.show}
+                    enterKeyHint="go"
                     autoFocus
                   />
                 )}
-                <button onClick={submitAnswer} className="submit-button">
+                <button onClick={submitAnswer} onMouseDown={(e) => e.preventDefault()} className="submit-button">
                   {(gameMode === 'unlimited' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced') ? 'FIRE!' : 'Attack Monster!'}
                 </button>
               </div>
@@ -5187,6 +5242,15 @@ function AppContent() {
     </div>
   );
 }
+
+// On phones the on-screen keyboard covers the lower half of the screen when an
+// answer input is focused. Once it has finished opening, scroll the whole
+// question card (question, input, fire button) to the top of the visible area.
+const scrollQuestionIntoView = (e) => {
+  const card = e.target.closest('.question-container');
+  if (!card) return;
+  setTimeout(() => card.scrollIntoView({ block: 'start', behavior: 'smooth' }), 350);
+};
 
 function App() {
   return (

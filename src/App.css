@@ -4537,14 +4537,14 @@ h5, h6 {
 
 @media (min-width: 700px) {
   .arcade-marquee {
-    font-size: 2.6rem;
+    font-size: 2.5rem;
     margin-bottom: 24px;
   }
 }
 
 @media (min-width: 1000px) {
   .arcade-marquee {
-    font-size: 3.2rem;
+    font-size: 3rem;
   }
 }
 
@@ -4559,8 +4559,8 @@ h5, h6 {
 }
 
 @keyframes arcadeMarqueeGlow {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.25); }
+  0%, 100% { text-shadow: 0 0 6px var(--arcade-neon-yellow), 0 0 18px var(--arcade-neon-orange), 0 0 36px rgba(255, 138, 0, 0.5); }
+  50% { text-shadow: 0 0 8px var(--arcade-neon-yellow), 0 0 24px var(--arcade-neon-orange), 0 0 44px rgba(255, 138, 0, 0.6); }
 }
 
 .arcade-theme .arcade-subtitle {
@@ -4609,7 +4609,7 @@ h5, h6 {
   }
 
   .arcade-theme .submit-button.enter-kingdom-button {
-    font-size: 1.1rem;
+    font-size: 1rem;
     padding: 22px 24px;
   }
 }
@@ -4648,7 +4648,7 @@ h5, h6 {
 
 .attract-marquee {
   font-family: var(--font-arcade-display);
-  font-size: 0.65rem;
+  font-size: 0.5rem;
   letter-spacing: 3px;
   color: var(--arcade-neon-pink);
   text-shadow: 0 0 8px var(--arcade-neon-pink);
@@ -4728,7 +4728,7 @@ h5, h6 {
 
 .attract-title {
   font-family: var(--font-arcade-display);
-  font-size: 1.7rem;
+  font-size: 1.5rem;
   line-height: 1.7;
   text-align: center;
   color: var(--arcade-neon-yellow);
@@ -4740,19 +4740,19 @@ h5, h6 {
 
 @media (min-width: 700px) {
   .attract-title {
-    font-size: 2.8rem;
+    font-size: 3rem;
   }
 }
 
 @media (min-width: 1000px) {
   .attract-title {
-    font-size: 3.4rem;
+    font-size: 3.5rem;
   }
 }
 
 .attract-score {
   font-family: var(--font-arcade-display);
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   color: var(--arcade-neon-green);
   text-shadow: 0 0 8px var(--arcade-neon-green);
   letter-spacing: 2px;
@@ -4760,7 +4760,7 @@ h5, h6 {
 
 @media (min-width: 700px) {
   .attract-score {
-    font-size: 2.2rem;
+    font-size: 2rem;
   }
 }
 
@@ -4774,7 +4774,7 @@ h5, h6 {
 
 .insert-coin-prompt {
   font-family: var(--font-arcade-display);
-  font-size: 0.8rem;
+  font-size: 1rem;
   letter-spacing: 1px;
   color: var(--arcade-neon-cyan);
   text-shadow: 0 0 10px var(--arcade-neon-cyan);
@@ -4783,7 +4783,7 @@ h5, h6 {
 
 @media (min-width: 700px) {
   .insert-coin-prompt {
-    font-size: 1.2rem;
+    font-size: 1rem;
     letter-spacing: 2px;
   }
 }
@@ -4851,7 +4851,7 @@ h5, h6 {
 
 .arcade-theme .submit-button.enter-kingdom-button {
   font-family: var(--font-arcade-display);
-  font-size: 0.9rem;
+  font-size: 1rem;
   letter-spacing: 1px;
   background: linear-gradient(180deg, var(--arcade-neon-orange) 0%, #d94912 100%);
   border: none;
@@ -4947,7 +4947,7 @@ h5, h6 {
 }
 
 @media (min-width: 1000px) {
-  .menu-logo-title { font-size: 1.8rem; }
+  .menu-logo-title { font-size: 2rem; }
 }
 
 .stage-select-header {
@@ -4961,7 +4961,7 @@ h5, h6 {
 
 .player-tag {
   font-family: var(--font-arcade-display);
-  font-size: 0.6rem;
+  font-size: 0.5rem;
   letter-spacing: 1px;
   color: #05030c;
   background: var(--arcade-neon-green);
@@ -4979,7 +4979,7 @@ h5, h6 {
   justify-content: center;
   gap: 16px;
   font-family: var(--font-arcade-display);
-  font-size: 0.85rem;
+  font-size: 1rem;
   letter-spacing: 1px;
   color: var(--arcade-neon-pink);
   text-shadow: 0 0 6px var(--arcade-neon-pink);
@@ -5072,7 +5072,7 @@ h5, h6 {
 
 .arcade-theme .card-content h4 {
   font-family: var(--font-arcade-display);
-  font-size: 0.8rem;
+  font-size: 1rem;
   letter-spacing: 0.5px;
   line-height: 1.6;
   color: var(--arcade-text);
@@ -5081,7 +5081,7 @@ h5, h6 {
 
 @media (min-width: 700px) {
   .arcade-theme .card-content h4 {
-    font-size: 0.95rem;
+    font-size: 1rem;
   }
 }
 
@@ -5148,8 +5148,8 @@ h5, h6 {
     border-radius: 24px / 18px;
   }
 
-  .arcade-marquee { font-size: 1.15rem; }
-  .attract-title { font-size: 1.3rem; }
+  .arcade-marquee { font-size: 1rem; }
+  .attract-title { font-size: 1.5rem; }
   .attract-vs { font-size: 2.4rem; }
 }
 
@@ -5284,7 +5284,7 @@ h5, h6 {
 
 .training-arcade .submit-button {
   font-family: var(--font-arcade-display);
-  font-size: 0.9rem;
+  font-size: 1rem;
   background: rgba(255, 46, 154, 0.18);
   border: 2px solid var(--arcade-neon-pink);
   color: var(--arcade-neon-pink);
@@ -5375,18 +5375,18 @@ h5, h6 {
 
 .training-arcade .done-button {
   font-family: var(--font-arcade-display);
-  font-size: 0.9rem;
-  background: rgba(255, 46, 154, 0.18);
-  border: 2px solid var(--arcade-neon-pink);
-  color: var(--arcade-neon-pink);
-  text-shadow: 0 0 6px rgba(255, 46, 154, 0.4);
-  box-shadow: 0 0 14px rgba(255, 46, 154, 0.35);
+  font-size: 1rem;
+  background: rgba(0, 246, 255, 0.12);
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 6px rgba(0, 246, 255, 0.4);
+  box-shadow: 0 0 14px rgba(0, 246, 255, 0.35);
   letter-spacing: 1px;
 }
 
 .training-arcade .done-button:hover {
-  background: rgba(255, 46, 154, 0.3);
-  box-shadow: 0 0 20px rgba(255, 46, 154, 0.55);
+  background: rgba(0, 246, 255, 0.22);
+  box-shadow: 0 0 20px rgba(0, 246, 255, 0.55);
 }
 
 .training-arcade .quit-link {
@@ -5544,7 +5544,7 @@ h5, h6 {
 
 .results-arcade h1 {
   font-family: var(--font-arcade-display);
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   line-height: 1.7;
   letter-spacing: 1px;
   color: var(--arcade-neon-yellow);
@@ -6567,7 +6567,7 @@ h5, h6 {
   .laser-cannon { left: 34px; bottom: 44px; width: 62px; height: 62px; }
   .laser-beam { left: 100px; right: 130px; height: 12px; top: 66%; }
   .monster-taunt-bubble { font-size: 1.25rem; }
-  .training-arcade .question { font-size: 1.8rem; }
+  .training-arcade .question { font-size: 2rem; }
 }
 
 @media (max-width: 480px) {
@@ -6613,4 +6613,61 @@ body.training-mode-bg {
 .App.training-page::before,
 .App.training-page::after {
   display: none;
+}
+
+/* ============================================
+   MOBILE TEXT SHARPNESS
+   iOS Safari renders pixel-font text with a blurred text-shadow soft. Drop the
+   text glow on phones so the glyphs stay sharp. Placed last to win over the
+   per-component glow rules above, hence the !important.
+   ============================================ */
+@media (max-width: 768px) {
+  .arcade-theme *,
+  .training-arcade *,
+  .results-arcade * {
+    text-shadow: none !important;
+  }
+}
+
+/* ============================================
+   MOBILE ANSWER FOCUS
+   scrollQuestionIntoView (App.js) scrolls the question card to the top when an
+   answer input is focused. Extra bottom space lets short screens scroll far
+   enough for that, and the margin keeps the card off the browser chrome.
+   ============================================ */
+@media (max-width: 768px) {
+  .App.training-page {
+    padding-bottom: 45vh;
+  }
+
+  .training-arcade .question-container {
+    scroll-margin-top: 12px;
+  }
+}
+
+/* ============================================
+   MOBILE FIRE / DONE BUTTONS
+   Fire becomes a full-width, solid button directly under the answer input (the
+   focus scroll above keeps it just over the keyboard). Done is cyan in the base
+   styles (all viewports) so the two can't be mistaken for each other.
+   ============================================ */
+@media (max-width: 768px) {
+  .training-arcade .answer-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .training-arcade .answer-row .answer-input,
+  .training-arcade .answer-row .submit-button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .training-arcade .answer-row .submit-button {
+    min-height: 56px;
+    background: var(--arcade-neon-pink);
+    color: #0a0618;
+    text-shadow: none;
+  }
 }
