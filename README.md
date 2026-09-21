@@ -2,7 +2,7 @@
 
 An engaging, gamified multiplication (and division) practice app designed for elementary school students. Features single-player practice, multiplayer classroom battles, detective-style problem solving, and a self-service teacher portal with usage reporting.
 
-![Version](https://img.shields.io/badge/version-4.0.3-blue)
+![Version](https://img.shields.io/badge/version-5.0.1-blue)
 ![React](https://img.shields.io/badge/React-19.1.1-61dafb)
 ![Firebase](https://img.shields.io/badge/Firebase-12.1.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -49,15 +49,15 @@ An engaging, gamified multiplication (and division) practice app designed for el
 - Progressive Web App (PWA) support for offline play
 - Mobile-optimized interface
 
-## 🆕 What's New in v4.0.3
+## 🆕 What's New in v5.0.1
 
 ### Bug Fixes
-- Fixed Squad Showdown's "Play Another Battle" not actually resetting the game - the host (and anyone still connected) would see the previous battle's score and timer instead of a fresh start
-- Fixed the Squad Showdown join-code field not clearing between battles, so it could show a stale code left over from a previous game
-- Fixed a Battle Mode bug where a teacher starting a "New Battle" could leave a student stuck on the previous round's results screen forever, unable to join the new round without manually leaving and rejoining
-- Fixed Battle Mode round restarts not resetting each student's score and streak, so a new round could start showing leftover stats from the previous one
-
-See [prod/v4.0.3/RELEASE_NOTES.md](./prod/v4.0.3/RELEASE_NOTES.md) for full details.
+- Fixed the Squad Showdown timer drifting out of sync between players: the countdown now runs off the server start time and no longer pauses on answers. Squad Showdown is now 1 minute instead of 3
+- Fixed blurry titles, numbers, and question text on mobile
+- On mobile, tapping the answer field now scrolls so the question, input, and Fire button are all visible; Fire is a full-width button, Done has its own cyan style in every mode, and the input stays focused between questions so the keyboard stays open
+- Fixed uneven factor frequency (11s and 12s showing up too often): questions in every mode now come from a shuffled deck, minimizing in-session repeats
+- Fixed Detective mode repeating clues and clue types
+- Multiplayer join codes no longer use the easily confused characters 0 and O
 
 ## 🚀 Getting Started
 
@@ -116,7 +116,7 @@ multiply-monsters/
 │   ├── teacherUtils.js  # Teacher auth + Firestore functions
 │   └── reportUtils.js   # CSV/usage report aggregation
 ├── prod/                # Production builds
-│   ├── v4.0.3/         # Latest release
+│   ├── v4.0.3/         # Latest archived release
 │   ├── v4.0.2/
 │   ├── v4.0.1/
 │   └── ...
@@ -212,6 +212,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 See the in-app version history screen or [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.
 
 ### Recent Releases
+- **v5.0.1** (Sep 2026) - Bug fixes: Squad Showdown timer sync (now 1 minute), mobile text sharpness and answer-field focus/keyboard handling, shuffled-deck question randomization, Detective mode repeats, and multiplayer codes without 0/O
+- **v5.0.0** (Sep 2026) - Arcade re-skin of Battle Mode, Squad Showdown, and the Teacher Portal
 - **v4.0.3** (Jul 2026) - Bug fixes: Squad Showdown and Battle Mode game-restart bugs where a new battle/round didn't reset scores, timers, and could leave players stuck on the old results screen
 - **v4.0.2** (Jul 2026) - Bug fixes: Squad Showdown and Battle Mode start-screen flicker, and a Firestore rules bug blocking Battle Mode session creation
 - **v4.0.1** (Jul 2026) - Bug fixes and polish: input-freeze fix, question-timing fix, Teacher Portal toggle redesign, stroke-icon pass, and a feedback button
