@@ -2,7 +2,7 @@
 
 An engaging, gamified multiplication (and division) practice app designed for elementary school students. Features single-player practice, multiplayer classroom battles, detective-style problem solving, and a self-service teacher portal with usage reporting.
 
-![Version](https://img.shields.io/badge/version-5.0.1-blue)
+![Version](https://img.shields.io/badge/version-5.0.2-blue)
 ![React](https://img.shields.io/badge/React-19.1.1-61dafb)
 ![Firebase](https://img.shields.io/badge/Firebase-12.1.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -49,7 +49,16 @@ An engaging, gamified multiplication (and division) practice app designed for el
 - Progressive Web App (PWA) support for offline play
 - Mobile-optimized interface
 
-## 🆕 What's New in v5.0.1
+## 🆕 What's New in v5.0.2
+
+### Bug Fixes
+- Detective mode clues now draw from a shuffled fact deck like every other mode, so the same fact can't keep retesting under different phrasing while other facts go unused
+- Squad Showdown matches now start from a freshly shuffled question deck instead of continuing from leftover deck state from an earlier session
+- Fixed questions like "12 × 12 = ?" wrapping onto two lines on phones, across every mode
+- Fixed "Next Question" buttons (Detective, Two-Digit) spilling past their card's border on narrow phones instead of wrapping inside it
+- Fixed player names getting squeezed and wrapping mid-word in Squad Showdown's and Battle Mode's live rankings tables on phones
+
+## What's New in v5.0.1
 
 ### Bug Fixes
 - Fixed the Squad Showdown timer drifting out of sync between players: the countdown now runs off the server start time and no longer pauses on answers. Squad Showdown is now 1 minute instead of 3
@@ -212,6 +221,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 See the in-app version history screen or [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.
 
 ### Recent Releases
+- **v5.0.2** (Sep 2026) - Bug fixes: Detective mode and Squad Showdown now draw from a properly shuffled/reset question deck, and mobile wrapping/pinching fixes across question text, Next Question buttons, and live rankings tables
 - **v5.0.1** (Sep 2026) - Bug fixes: Squad Showdown timer sync (now 1 minute), mobile text sharpness and answer-field focus/keyboard handling, shuffled-deck question randomization, Detective mode repeats, and multiplayer codes without 0/O
 - **v5.0.0** (Sep 2026) - Arcade re-skin of Battle Mode, Squad Showdown, and the Teacher Portal
 - **v4.0.3** (Jul 2026) - Bug fixes: Squad Showdown and Battle Mode game-restart bugs where a new battle/round didn't reset scores, timers, and could leave players stuck on the old results screen

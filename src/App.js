@@ -191,6 +191,13 @@ const buildFactDeck = (mode) => {
     for (let small = 1; small <= 9; small++) {
       for (let large = 1; large <= 20; large++) add(small, large);
     }
+  } else if (mode === 'detective') {
+    // Detective clues allow either factor to be 0 (the hidden factor can
+    // legitimately be 0; only the clue's stated "given" number needs to be
+    // non-zero, which generateDetectiveClue enforces itself).
+    for (let x = 0; x <= 12; x++) {
+      for (let y = x; y <= 12; y++) add(x, y);
+    }
   } else {
     for (let x = 1; x <= 12; x++) {
       for (let y = x; y <= 12; y++) add(x, y);
@@ -360,8 +367,19 @@ function AppContent() {
   }, [gameMode, currentTeacher?.uid]);
 
   // App version and changelog
-  const APP_VERSION = 'v5.0.1';
+  const APP_VERSION = 'v5.0.2';
   const CHANGELOG = [
+    {
+      version: 'v5.0.2',
+      date: '09-22-2026',
+      features: [
+        'Detective mode clues now draw from a shuffled fact deck like every other mode, so the same fact can\'t keep retesting under different phrasing while other facts go unused',
+        'Squad Showdown matches now start from a freshly shuffled question deck instead of continuing from whatever deck state was left over from an earlier session',
+        'Fixed questions like "12 × 12 = ?" wrapping onto two lines on phones, across every mode',
+        'Fixed "Next Question" buttons (Detective, Two-Digit) spilling past their card\'s border on narrow phones instead of wrapping inside it',
+        'Fixed player names getting squeezed and wrapping mid-word in Squad Showdown\'s and Battle Mode\'s live rankings tables on phones'
+      ]
+    },
     {
       version: 'v5.0.1',
       date: '09-21-2026',
@@ -587,6 +605,7 @@ function AppContent() {
   const usedCluesRef = useRef(new Set()); // detective clues already shown this session (ref so timer callbacks see current data)
   const lastClueTypeRef = useRef(null);
   const factDeckRef = useRef(null); // shuffled deck for generateQuestion / generateDivisionQuestion
+  const detectiveFactDeckRef = useRef(null); // shuffled deck for generateDetectiveClue
   const [includeDivision, setIncludeDivision] = useState(false);
 
   // Multiplayer states
@@ -1294,17 +1313,6 @@ function AppContent() {
     setBattleMonsterColor(BATTLE_MONSTER_COLORS[Math.floor(Math.random() * BATTLE_MONSTER_COLORS.length)]);
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
 
-    // Unbiased random factor (0-12)
-    const getRandomFactor = () => secureRandomInt(13);
-
-    // For clue types with a "given" number, that number must be non-zero.
-    // Otherwise the product is always 0 no matter what the hidden factor
-    // is, and the clue becomes mathematically unanswerable (e.g. "one
-    // factor is odd, the other is 0, the product is 0 - what's the odd
-    // factor?" has infinitely many valid answers). The hidden/unknown
-    // factor can still legitimately be 0.
-    const getRandomFactorNonZero = () => 1 + secureRandomInt(12); // 1-12
-
     const clueTypes = ['product', 'missingFactor', 'factorRange', 'factorProperty', 'divisionPrep'];
 
     let selectedType = '';
@@ -1313,15 +1321,35 @@ function AppContent() {
     let prefilledFactor = null;
     let prefilledPosition = null;
 
-    // Try up to maxAttempts times to produce a clue that hasn't already
-    // appeared this session, so the same question doesn't repeat.
+    // Try up to maxAttempts times to produce clue text that hasn't already
+    // appeared this session. Each attempt draws a fresh fact from the
+    // shuffled 0-12 x 0-12 deck (see buildFactDeck/drawFact), so the
+    // underlying fact itself won't repeat until every fact has been used
+    // once - unlike independent per-clue random draws, which could retest
+    // the same fact repeatedly (just phrased differently) while other
+    // facts went unused.
     const maxAttempts = 100;
     let attempts = 0;
 
     do {
       attempts++;
-      // Avoid the same clue type twice in a row
-      const typePool = clueTypes.filter(t => t !== lastClueTypeRef.current);
+      const [factor1, factor2] = drawFact(detectiveFactDeckRef, 'detective');
+
+      // Clue types that state a factor explicitly need that "given" number
+      // to be non-zero. Otherwise the product is always 0 no matter what
+      // the hidden factor is, and the clue becomes mathematically
+      // unanswerable (e.g. "one factor is odd, the other is 0, the product
+      // is 0 - what's the odd factor?" has infinitely many valid answers).
+      // The hidden/unknown factor can still legitimately be 0.
+      const given = factor1 !== 0 ? factor1 : (factor2 !== 0 ? factor2 : null);
+      const other = given === factor1 ? factor2 : factor1;
+
+      // Avoid the same clue type twice in a row, and skip "given factor"
+      // clue types entirely when this fact is 0 x 0.
+      let typePool = clueTypes.filter(t => t !== lastClueTypeRef.current);
+      if (given === null) {
+        typePool = typePool.filter(t => t === 'product' || t === 'factorRange');
+      }
       selectedType = typePool[secureRandomInt(typePool.length)];
       clue = '';
       acceptedAnswers = [];
@@ -1329,10 +1357,6 @@ function AppContent() {
       prefilledPosition = null;
 
       if (selectedType === 'product') {
-        // Generate a product dynamically instead of from a fixed list
-        // Use two random factors to create more variety
-        const factor1 = getRandomFactor();
-        const factor2 = getRandomFactor();
         const product = factor1 * factor2;
 
         // Find all factor pairs for this product (within 0-12 range)
@@ -1352,89 +1376,56 @@ function AppContent() {
         }
 
       } else if (selectedType === 'missingFactor') {
-        // The given factor must be non-zero so "the other number" has a
-        // single correct answer.
-        const factor1 = getRandomFactorNonZero();
-        const factor2 = getRandomFactor();
-        const product = factor1 * factor2;
+        const product = given * other;
 
-        clue = `I multiplied ${factor1} by another number and got ${product}. What was the other number?`;
-        acceptedAnswers = [[factor1, factor2]]; // Only one correct answer
+        clue = `I multiplied ${given} by another number and got ${product}. What was the other number?`;
+        acceptedAnswers = [[given, other]]; // Only one correct answer
 
-        // The clue states factor1 explicitly, so pre-fill it in the first box.
-        prefilledFactor = factor1;
+        // The clue states the given factor explicitly, so pre-fill it in the first box.
+        prefilledFactor = given;
         prefilledPosition = 1;
 
       } else if (selectedType === 'factorRange') {
-        // Both factors between certain ranges with more variety
-        const minRange = Math.floor(Math.random() * 9); // 0-8
-        const maxRange = Math.min(12, minRange + Math.floor(Math.random() * 5) + 2); // Range of 2-6 numbers
+        // Build a range around the drawn fact so it's always a valid answer.
+        const lo = Math.min(factor1, factor2);
+        const hi = Math.max(factor1, factor2);
+        const minRange = secureRandomInt(lo + 1); // 0..lo
+        const maxRange = hi + secureRandomInt(13 - hi); // hi..12
 
-        const validPairs = [];
-        for (let i = minRange; i <= maxRange && i <= 12; i++) {
-          for (let j = i; j <= maxRange && j <= 12; j++) {
-            if (i * j <= 144) {
-              validPairs.push([i, j, i * j]);
-            }
-          }
-        }
-
-        if (validPairs.length > 0) {
-          const selected = validPairs[Math.floor(Math.random() * validPairs.length)];
-          clue = `Both my factors are between ${minRange} and ${maxRange}, and my product is ${selected[2]}. What are my factors?`;
-          acceptedAnswers = [[selected[0], selected[1]]];
-        }
-        // If no valid pairs (shouldn't happen since both factors max at 12
-        // and 12*12=144), clue stays '' and the loop below will retry.
+        clue = `Both my factors are between ${minRange} and ${maxRange}, and my product is ${factor1 * factor2}. What are my factors?`;
+        acceptedAnswers = [[lo, hi]];
 
       } else if (selectedType === 'factorProperty') {
-        const isEvenClue = Math.random() > 0.5;
-        // The known factor must be non-zero (see getRandomFactorNonZero comment above).
-        const knownFactor = getRandomFactorNonZero();
+        const isEvenClue = other % 2 === 0;
 
-        let unknownFactor;
-        if (isEvenClue) {
-          // Unknown factor is even
-          const evenFactors = [0, 2, 4, 6, 8, 10, 12];
-          unknownFactor = evenFactors[Math.floor(Math.random() * evenFactors.length)];
-        } else {
-          // Unknown factor is odd
-          const oddFactors = [1, 3, 5, 7, 9, 11];
-          unknownFactor = oddFactors[Math.floor(Math.random() * oddFactors.length)];
-        }
-
-        const product = knownFactor * unknownFactor;
-        clue = `One factor is ${isEvenClue ? 'even' : 'odd'}, the other is ${knownFactor}, and the product is ${product}. What's the ${isEvenClue ? 'even' : 'odd'} factor?`;
-        acceptedAnswers = [[Math.min(knownFactor, unknownFactor), Math.max(knownFactor, unknownFactor)]];
+        clue = `One factor is ${isEvenClue ? 'even' : 'odd'}, the other is ${given}, and the product is ${given * other}. What's the ${isEvenClue ? 'even' : 'odd'} factor?`;
+        acceptedAnswers = [[Math.min(given, other), Math.max(given, other)]];
 
         // The clue states the known factor explicitly, so pre-fill it.
         // Randomize which box holds it for variety.
-        prefilledFactor = knownFactor;
-        prefilledPosition = Math.random() > 0.5 ? 1 : 2;
+        prefilledFactor = given;
+        prefilledPosition = secureRandomInt(2) === 0 ? 1 : 2;
 
       } else if (selectedType === 'divisionPrep') {
         // Division prep: give one factor and the product, ask for the other factor.
-        // The given factor must be non-zero so "my other number" has a single answer.
-        const givenFactor = getRandomFactorNonZero();
-        const otherFactor = getRandomFactor();
-        const product = givenFactor * otherFactor;
+        const product = given * other;
 
         // Randomly choose which position the given factor occupies
-        const giveFirstFactor = Math.random() > 0.5;
+        const giveFirstFactor = secureRandomInt(2) === 0;
 
         if (giveFirstFactor) {
-          prefilledFactor = givenFactor;
+          prefilledFactor = given;
           prefilledPosition = 1;
-          clue = `My first number is ${givenFactor} and my product is ${product}. What's my second number?`;
-          acceptedAnswers = [[givenFactor, otherFactor]];
+          clue = `My first number is ${given} and my product is ${product}. What's my second number?`;
+          acceptedAnswers = [[given, other]];
         } else {
-          prefilledFactor = givenFactor;
+          prefilledFactor = given;
           prefilledPosition = 2;
-          clue = `My second number is ${givenFactor} and my product is ${product}. What's my first number?`;
-          acceptedAnswers = [[otherFactor, givenFactor]];
+          clue = `My second number is ${given} and my product is ${product}. What's my first number?`;
+          acceptedAnswers = [[other, given]];
         }
       }
-    } while ((!clue || usedCluesRef.current.has(clue)) && attempts < maxAttempts);
+    } while (usedCluesRef.current.has(clue) && attempts < maxAttempts);
 
     if (clue) {
       usedCluesRef.current.add(clue);
@@ -1672,6 +1663,7 @@ function AppContent() {
     setPreviousGameMode('unlimited');
     setScore({ correct: 0, total: 0 });
     factDeckRef.current = null;
+    detectiveFactDeckRef.current = null;
     usedCluesRef.current = new Set();
     lastClueTypeRef.current = null;
     setGameActive(true);
@@ -1698,6 +1690,7 @@ function AppContent() {
     setScore({ correct: 0, total: 0 });
     setTimeLeft(60);
     factDeckRef.current = null;
+    detectiveFactDeckRef.current = null;
     usedCluesRef.current = new Set();
     lastClueTypeRef.current = null;
     
@@ -1730,6 +1723,7 @@ function AppContent() {
     setScore({ correct: 0, total: 0 });
     setTimeLeft(60);
     factDeckRef.current = null;
+    detectiveFactDeckRef.current = null;
     usedCluesRef.current = new Set();
     lastClueTypeRef.current = null;
     
@@ -1760,6 +1754,7 @@ function AppContent() {
     setScore({ correct: 0, total: 0 });
     setDetectiveQuestionCount(1); // Start with question 1
     factDeckRef.current = null;
+    detectiveFactDeckRef.current = null;
     usedCluesRef.current = new Set();
     lastClueTypeRef.current = null;
     setGameActive(true);
@@ -1782,6 +1777,7 @@ function AppContent() {
     setScore({ correct: 0, total: 0 });
     setTwoDigitQuestionCount(1); // Start with question 1
     factDeckRef.current = null;
+    detectiveFactDeckRef.current = null;
     usedCluesRef.current = new Set();
     lastClueTypeRef.current = null;
     setGameActive(true);
@@ -1803,6 +1799,7 @@ function AppContent() {
     setPreviousGameMode('division');
     setScore({ correct: 0, total: 0 });
     factDeckRef.current = null;
+    detectiveFactDeckRef.current = null;
     usedCluesRef.current = new Set();
     lastClueTypeRef.current = null;
     setGameActive(true);
@@ -2387,6 +2384,11 @@ function AppContent() {
         setGameActive(true);
         beginUsageTracking('squadBattle');
         setTimeLeft(60);
+        // Start each match with a freshly shuffled deck, same as every
+        // other game mode - otherwise this client's questions would
+        // continue from whatever deck state was left over from an earlier
+        // session (e.g. a prior practice run or squad match).
+        factDeckRef.current = null;
         generateQuestion();
       }
     }
@@ -2399,6 +2401,9 @@ function AppContent() {
       beginUsageTracking('squadSurvival');
       setPlayerLives(3); // Reset lives
       setIsEliminated(false); // Reset elimination status
+      // Start each match with a freshly shuffled deck, same as every other
+      // game mode - see squadBattle start effect above for why.
+      factDeckRef.current = null;
       generateQuestion();
     }
   }, [gameMode, gameActive, squadData?.isStarted, generateQuestion, beginUsageTracking]);

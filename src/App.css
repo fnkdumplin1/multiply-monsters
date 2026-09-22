@@ -1810,6 +1810,20 @@ body:has(input:focus) .mode-button::before {
     font-size: 1.5rem;
     min-width: 40px;
   }
+
+  /* Same squeeze as .player-details (Squad Showdown's live rankings):
+     .player-info-monitor's space-between row crams the name against three
+     stat pills (score/percentage/streak), so the name wraps mid-word on
+     narrow phones. Stack name above stats instead. */
+  .player-info-monitor {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .player-info-monitor .player-name {
+    width: 100%;
+  }
 }
 
 .submit-button, .done-button, .back-button {
@@ -6172,6 +6186,39 @@ h5, h6 {
   text-shadow: 0 0 6px var(--arcade-neon-green);
 }
 
+/* Live Rankings row: .player-details is a space-between flex row cramming
+   the player's name against the score/streak pills. Neither side shrinks,
+   so on narrow phones the name gets squeezed into a couple of characters'
+   width and wraps hard (e.g. "Jane Smith (You)" wrapping to 3 lines).
+   Stack name above stats instead so both get the row's full width. */
+@media (max-width: 480px) {
+  .player-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .player-name {
+    width: 100%;
+  }
+
+  /* .squad-leaderboard's 20px margin + 20px padding, plus the rank badge's
+     15px margin, leave barely 100px for the name/stats column on a phone.
+     Tighten all three so there's real room to render in. */
+  .squad-leaderboard {
+    margin: 12px;
+    padding: 12px;
+  }
+
+  .live-player-item {
+    padding: 10px 12px;
+  }
+
+  .rank-badge {
+    margin-right: 10px;
+  }
+}
+
 /* Pixel-icon glow/inline-flow, extended to the squad-only wrappers that
    reuse rank/host/ready badges instead of the .rank/.final-rank ones the
    Battle Mode results screens use. */
@@ -6578,6 +6625,11 @@ h5, h6 {
   .laser-beam { left: 50px; right: 66px; height: 7px; top: 70%; }
   .monster-taunt-bubble { font-size: 0.9rem; right: -4px; }
   .training-arcade .question-container { padding: 22px 18px; }
+  /* At 1.5rem/2px letter-spacing a wide question ("144 ÷ 12 = ?") is wider
+     than the narrow question-container, wrapping the "= ?" onto its own
+     line. Shrink just enough to keep every question on one line down to
+     320px. */
+  .training-arcade .question { font-size: 1.2rem; letter-spacing: 0.5px; white-space: nowrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -6669,5 +6721,30 @@ body.training-mode-bg {
     background: var(--arcade-neon-pink);
     color: #0a0618;
     text-shadow: none;
+  }
+
+  /* Detective's "Next Question" (icon + text, inline-block, nowrap) is wide
+     enough to spill past the feedback card's right border on narrow phones.
+     Let it fill the card and wrap instead of overflowing. */
+  .training-arcade .next-question-btn {
+    width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+  }
+
+  /* Two-Digit mode's "Try Again"/"Next Question" pair has the same
+     nowrap-inline-block overflow (Next Question's text spills past the
+     feedback card's border). Stack them full-width instead of trying to
+     fit two icon+text buttons side by side on a phone. */
+  .twodigit-feedback-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .twodigit-feedback-buttons .submit-button {
+    width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    margin: 0 !important;
   }
 }
