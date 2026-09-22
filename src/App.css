@@ -5117,6 +5117,9 @@ h5, h6 {
 .arcade-theme .mode-card.division { border-color: rgba(255, 230, 0, 0.3); }
 .arcade-theme .mode-card.division .card-icon { color: var(--arcade-neon-yellow); }
 
+.arcade-theme .mode-card.flashcards { border-color: rgba(255, 46, 154, 0.3); }
+.arcade-theme .mode-card.flashcards .card-icon { color: var(--arcade-neon-pink); }
+
 .arcade-theme .mode-card.timed { border-color: rgba(255, 138, 0, 0.3); }
 .arcade-theme .mode-card.timed .card-icon { color: var(--arcade-neon-orange); }
 
@@ -5542,6 +5545,377 @@ h5, h6 {
 
 .training-arcade .ld-vinculum {
   border-top-color: var(--arcade-neon-cyan);
+}
+
+/* ============================================
+   FLASH CARDS MODE
+   ============================================ */
+.flashcards-arcade {
+  --arcade-bg-deep: #0a0618;
+  --arcade-bg-mid: #170f34;
+  --arcade-neon-pink: #ff2e9a;
+  --arcade-neon-cyan: #00f6ff;
+  --arcade-neon-yellow: #ffe600;
+  --arcade-neon-purple: #b026ff;
+  --arcade-neon-green: #39ff14;
+  --arcade-neon-orange: #ff8a00;
+  --arcade-text: #f5f0ff;
+  --font-arcade-display: 'Press Start 2P', 'Courier New', monospace;
+  --font-arcade-body: 'VT323', 'Courier New', monospace;
+
+  background: var(--arcade-bg-deep);
+  border-radius: 24px;
+  border: 3px solid var(--arcade-neon-pink);
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(255, 46, 154, 0.4),
+    inset 0 0 50px rgba(0, 0, 0, 0.6);
+  padding: 32px;
+  max-width: 640px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.flashcards-title {
+  font-family: var(--font-arcade-display);
+  color: var(--arcade-neon-pink);
+  text-shadow: 0 0 8px var(--arcade-neon-pink);
+  font-size: 1.3rem;
+  letter-spacing: 2px;
+  margin: 0;
+  text-align: center;
+}
+
+.flashcards-subtitle {
+  font-family: var(--font-arcade-body);
+  color: rgba(245, 240, 255, 0.75);
+  font-size: 1.2rem;
+  margin: 0;
+  text-align: center;
+}
+
+.flashcards-factor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.flashcards-factor-btn {
+  font-family: var(--font-arcade-display);
+  font-size: 1.1rem;
+  padding: 14px 0;
+  background: #120a28;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  color: var(--arcade-text);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.flashcards-factor-btn:hover {
+  border-color: var(--arcade-neon-cyan);
+  box-shadow: 0 0 10px rgba(0, 246, 255, 0.35);
+}
+
+.flashcards-factor-btn.selected {
+  border-color: var(--arcade-neon-pink);
+  background: rgba(255, 46, 154, 0.18);
+  color: var(--arcade-neon-pink);
+  text-shadow: 0 0 6px var(--arcade-neon-pink);
+  box-shadow: 0 0 14px rgba(255, 46, 154, 0.35);
+}
+
+.flashcards-order-toggle {
+  display: flex;
+  gap: 10px;
+}
+
+.flashcards-order-btn {
+  font-family: var(--font-arcade-body);
+  font-size: 1.15rem;
+  padding: 8px 20px;
+  background: #120a28;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  color: rgba(245, 240, 255, 0.75);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.flashcards-order-btn.selected {
+  border-color: var(--arcade-neon-cyan);
+  background: rgba(0, 246, 255, 0.15);
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 6px var(--arcade-neon-cyan);
+}
+
+.flashcards-arcade .game-header {
+  position: relative;
+  background: transparent;
+  box-shadow: none;
+  margin: 0;
+}
+
+.flashcards-arcade .compact-game-stats {
+  justify-content: center;
+  gap: 20px;
+}
+
+.flashcards-arcade .compact-game-stats .score,
+.flashcards-arcade .flashcards-progress {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-yellow);
+  box-shadow: 0 0 10px rgba(255, 230, 0, 0.35);
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-yellow);
+  text-shadow: 0 0 6px var(--arcade-neon-yellow);
+  font-size: 1.4rem;
+  padding: 6px 16px;
+  border-radius: 8px;
+}
+
+/* The card itself: a 3D flip, front shows the problem (mirroring a classic
+   paper flash card), back reveals the worked-out answer. */
+.flashcard-scene {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 3 / 2;
+  perspective: 1200px;
+}
+
+.flashcard {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.flashcard.flipped {
+  transform: rotateY(180deg);
+}
+
+.flashcard-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  background: #f5f0ff;
+  border: 4px solid var(--arcade-neon-cyan);
+  box-shadow: 0 0 20px rgba(0, 246, 255, 0.35), inset 0 0 0 2px rgba(10, 6, 24, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.flashcard-front {
+  color: #170f34;
+}
+
+.flashcard-back {
+  transform: rotateY(180deg);
+  border-color: var(--arcade-neon-green);
+}
+
+.flashcard-back.incorrect {
+  border-color: var(--arcade-neon-orange);
+}
+
+/* Classic stacked flash-card problem: top number, "x N" below it flush
+   right, a rule under both, and (on the back) the answer under the rule. */
+.flashcard-equation-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: auto;
+}
+
+.flashcard-num {
+  font-family: var(--font-arcade-display);
+  font-size: 2rem;
+  letter-spacing: 2px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.flashcard-line {
+  width: 100%;
+  height: 3px;
+  margin-top: 8px;
+  background: rgba(23, 15, 52, 0.3);
+  border-radius: 2px;
+}
+
+.flashcard-answer {
+  font-family: var(--font-arcade-display);
+  font-size: 3.5rem;
+  letter-spacing: 2px;
+  text-align: center;
+  color: var(--arcade-neon-purple);
+}
+
+.flashcards-arcade .feedback {
+  background: rgba(10, 6, 24, 0.6);
+  border: 2px solid var(--arcade-neon-green);
+  border-radius: 12px;
+  padding: 12px 20px;
+}
+
+.flashcards-arcade .feedback.correct {
+  border-color: var(--arcade-neon-green);
+  box-shadow: inset 0 0 20px rgba(57, 255, 20, 0.2);
+}
+
+.flashcards-arcade .feedback.incorrect {
+  border-color: var(--arcade-neon-orange);
+  box-shadow: inset 0 0 20px rgba(255, 138, 0, 0.2);
+}
+
+.flashcards-arcade .feedback.correct .feedback-message {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-green);
+  text-shadow: 0 0 8px var(--arcade-neon-green);
+  font-size: 1.4rem;
+  text-align: center;
+}
+
+.flashcards-arcade .feedback.incorrect .feedback-message {
+  font-family: var(--font-arcade-body);
+  color: var(--arcade-neon-orange);
+  text-shadow: 0 0 8px var(--arcade-neon-orange);
+  font-size: 1.4rem;
+  text-align: center;
+}
+
+.flashcards-arcade .answer-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.flashcards-arcade .answer-input {
+  background: #120a28;
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-text);
+  font-family: var(--font-arcade-body);
+  font-size: 1.6rem;
+}
+
+.flashcards-arcade .answer-input:focus {
+  border-color: var(--arcade-neon-yellow);
+  box-shadow: 0 0 12px var(--arcade-neon-yellow);
+}
+
+.flashcards-arcade .submit-button {
+  font-family: var(--font-arcade-display);
+  font-size: 1rem;
+  background: rgba(255, 46, 154, 0.18);
+  border: 2px solid var(--arcade-neon-pink);
+  color: var(--arcade-neon-pink);
+  text-shadow: 0 0 6px rgba(255, 46, 154, 0.4);
+  box-shadow: 0 0 14px rgba(255, 46, 154, 0.35);
+  letter-spacing: 1px;
+  height: auto;
+  min-height: 48px;
+  white-space: nowrap;
+}
+
+.flashcards-arcade .submit-button:hover {
+  background: rgba(255, 46, 154, 0.3);
+  box-shadow: 0 0 20px rgba(255, 46, 154, 0.55);
+}
+
+.flashcards-arcade .game-controls {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.flashcards-arcade .done-button {
+  font-family: var(--font-arcade-display);
+  font-size: 1rem;
+  background: rgba(0, 246, 255, 0.12);
+  border: 2px solid var(--arcade-neon-cyan);
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 6px rgba(0, 246, 255, 0.4);
+  box-shadow: 0 0 14px rgba(0, 246, 255, 0.35);
+  letter-spacing: 1px;
+}
+
+.flashcards-arcade .done-button:hover {
+  background: rgba(0, 246, 255, 0.22);
+  box-shadow: 0 0 20px rgba(0, 246, 255, 0.55);
+}
+
+.flashcards-arcade .done-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.flashcards-arcade .quit-link {
+  font-family: var(--font-arcade-body);
+  font-size: 1rem;
+  color: rgba(245, 240, 255, 0.45);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.flashcards-arcade .quit-link:hover {
+  color: var(--arcade-text);
+  background: none;
+}
+
+.flashcards-arcade.results-arcade .results {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.flashcards-arcade.results-arcade .result-item {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-arcade-body);
+  font-size: 1.2rem;
+  color: var(--arcade-text);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
+  padding-bottom: 6px;
+}
+
+.flashcards-arcade.results-arcade .result-value {
+  color: var(--arcade-neon-cyan);
+  text-shadow: 0 0 6px var(--arcade-neon-cyan);
+}
+
+@media (max-width: 480px) {
+  .flashcards-arcade {
+    padding: 22px 16px;
+  }
+
+  .flashcards-factor-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .flashcard-scene {
+    max-width: 260px;
+  }
 }
 
 /* --- Results screens: shared arcade skin ---

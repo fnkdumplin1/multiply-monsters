@@ -55,6 +55,7 @@ const pathToMode = {
   '/detective': 'detective',
   '/two-digit': 'twoDigit',
   '/division': 'division',
+  '/flashcards': 'flashcards',
   '/multiplayer': 'multiplayerSelect',
   '/multiplayer/create': 'createSession',
   '/multiplayer/join': 'joinSession',
@@ -84,6 +85,7 @@ const modeToPath = {
   'detective': '/detective',
   'twoDigit': '/two-digit',
   'division': '/division',
+  'flashcards': '/flashcards',
   'multiplayerSelect': '/multiplayer',
   'createSession': '/multiplayer/create',
   'joinSession': '/multiplayer/join',
@@ -281,6 +283,7 @@ function AppContent() {
     document.body.classList.toggle(
       'training-mode-bg',
       gameMode === 'unlimited' || gameMode === 'detective' || gameMode === 'twoDigit' || gameMode === 'division' || gameMode === 'timed' || gameMode === 'advanced' ||
+      gameMode === 'flashcards' ||
       gameMode === 'results' || gameMode === 'multiplayerResults' || gameMode === 'squadResults' ||
       gameMode === 'multiplayerSelect' || gameMode === 'createSession' || gameMode === 'joinSession' ||
       gameMode === 'teacherLobby' || gameMode === 'studentLobby' || gameMode === 'teacherMonitor' ||
@@ -373,6 +376,8 @@ function AppContent() {
       version: 'v5.0.2',
       date: '09-22-2026',
       features: [
+        'Added Flash Cards: a classic self-checking practice deck for one times table (0x-12x), presented in order or shuffled, with a flip-card reveal and Correct!/Not quite! feedback - no timer, no battle arena',
+        'Renamed Training mode to Basic',
         'Detective mode clues now draw from a shuffled fact deck like every other mode, so the same fact can\'t keep retesting under different phrasing while other facts go unused',
         'Squad Showdown matches now start from a freshly shuffled question deck instead of continuing from whatever deck state was left over from an earlier session',
         'Fixed questions like "12 × 12 = ?" wrapping onto two lines on phones, across every mode',
@@ -607,6 +612,14 @@ function AppContent() {
   const factDeckRef = useRef(null); // shuffled deck for generateQuestion / generateDivisionQuestion
   const detectiveFactDeckRef = useRef(null); // shuffled deck for generateDetectiveClue
   const [includeDivision, setIncludeDivision] = useState(false);
+
+  // Flash Cards mode states
+  const [flashCardPhase, setFlashCardPhase] = useState('setup'); // 'setup' | 'playing' | 'complete'
+  const [flashCardFactor, setFlashCardFactor] = useState(null); // 1-12, the table being practiced
+  const [flashCardOrder, setFlashCardOrder] = useState('sequential'); // 'sequential' | 'random'
+  const [flashCardDeck, setFlashCardDeck] = useState([]); // [{a, b}] built from the chosen factor
+  const [flashCardIndex, setFlashCardIndex] = useState(0);
+  const [flashCardFlipped, setFlashCardFlipped] = useState(false);
 
   // Multiplayer states
   const [isMultiplayer, setIsMultiplayer] = useState(false);
@@ -1813,6 +1826,128 @@ function AppContent() {
     startBackgroundMusic();
   };
 
+  // Flash Cards: classic self-checking deck for one times table (0x-12x),
+  // in order or shuffled. No timer, no battle arena - just the card.
+  const buildFlashCardDeck = (factor, order) => {
+    const cards = Array.from({ length: 13 }, (_, n) => ({ a: n, b: factor }));
+    if (order === 'random') {
+      for (let i = cards.length - 1; i > 0; i--) {
+        const j = secureRandomInt(i + 1);
+        [cards[i], cards[j]] = [cards[j], cards[i]];
+      }
+    }
+    return cards;
+  };
+
+  const startFlashCards = () => {
+    initializeAudio();
+    playSound('click');
+    trackEvent('game_start', 'Game', 'Flash Cards');
+    setGameMode('flashcards');
+    setPreviousGameMode('flashcards');
+    setFlashCardPhase('setup');
+    setFlashCardFactor(null);
+    setFlashCardOrder('sequential');
+    setFlashCardDeck([]);
+    setFlashCardIndex(0);
+    setFlashCardFlipped(false);
+    setGameActive(false);
+    setScore({ correct: 0, total: 0 });
+    setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    setUserAnswer('');
+  };
+
+  const startFlashCardsRound = () => {
+    if (!flashCardFactor) return;
+    playSound('click');
+    const deck = buildFlashCardDeck(flashCardFactor, flashCardOrder);
+    setFlashCardDeck(deck);
+    setFlashCardIndex(0);
+    setFlashCardFlipped(false);
+    setScore({ correct: 0, total: 0 });
+    setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+    setUserAnswer('');
+    setGameActive(true);
+    setFlashCardPhase('playing');
+    beginUsageTracking('flashcards');
+    startBackgroundMusic();
+    setTimeout(() => {
+      if (answerInputRef.current) answerInputRef.current.focus();
+    }, 100);
+  };
+
+  const endFlashCards = () => {
+    setGameActive(false);
+    stopBackgroundMusic();
+    flushUsageTracking(score, 'completed');
+    try {
+      const gameOverAudio = new Audio(process.env.PUBLIC_URL + '/game-over.mp3');
+      gameOverAudio.volume = 0.5;
+      gameOverAudio.play().catch(() => {});
+    } catch (error) {
+      console.log('Game-over audio not supported or blocked');
+    }
+    setFlashCardPhase('complete');
+  };
+
+  const submitFlashCardAnswer = () => {
+    if (!userAnswer.trim() || flashCardFlipped) return;
+    initializeAudio();
+    playSound('submit');
+
+    const card = flashCardDeck[flashCardIndex];
+    const correctAnswer = card.a * card.b;
+    const isCorrect = parseInt(userAnswer, 10) === correctAnswer;
+
+    trackEvent('answer_submitted', 'Gameplay', `flashcards - ${isCorrect ? 'Correct' : 'Incorrect'}`, correctAnswer);
+
+    setScore(prev => ({
+      correct: prev.correct + (isCorrect ? 1 : 0),
+      total: prev.total + 1
+    }));
+
+    setFlashCardFlipped(true);
+    setFeedback({
+      show: true,
+      correct: isCorrect,
+      message: isCorrect ? 'Correct!' : 'Not quite!',
+      correctAnswer
+    });
+
+    setTimeout(() => playSound(isCorrect ? 'correct' : 'incorrect'), 400);
+
+    if (questionTimeoutRef.current) {
+      clearTimeout(questionTimeoutRef.current);
+    }
+    questionTimeoutRef.current = setTimeout(() => {
+      setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
+      setFlashCardFlipped(false);
+      setUserAnswer('');
+
+      if (flashCardIndex + 1 < flashCardDeck.length) {
+        setFlashCardIndex(prev => prev + 1);
+        setTimeout(() => {
+          if (answerInputRef.current) answerInputRef.current.focus();
+        }, 100);
+      } else {
+        endFlashCards();
+      }
+      questionTimeoutRef.current = null;
+    }, isCorrect ? 1800 : 2800);
+  };
+
+  const backToMenuFromFlashCards = () => {
+    if (questionTimeoutRef.current) {
+      clearTimeout(questionTimeoutRef.current);
+      questionTimeoutRef.current = null;
+    }
+    setFlashCardPhase('setup');
+    setFlashCardDeck([]);
+    setFlashCardIndex(0);
+    setFlashCardFlipped(false);
+    backToMenu();
+  };
+
   const generateTwoDigitQuestion = () => {
     console.log(`🔢 Generating two-digit question for ${userName}`);
 
@@ -2598,7 +2733,7 @@ function AppContent() {
                     <button className="mode-card training" onClick={startUnlimited} onMouseEnter={() => playSound('blip')}>
                       <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.monster} className="pixel-icon" /></div>
                       <div className="card-content">
-                        <h4>Training</h4>
+                        <h4>Basic</h4>
                         <p>Practice basics</p>
                       </div>
                     </button>
@@ -2624,6 +2759,14 @@ function AppContent() {
                       <div className="card-content">
                         <h4>Division</h4>
                         <p>Practice division</p>
+                      </div>
+                    </button>
+
+                    <button className="mode-card flashcards" onClick={startFlashCards} onMouseEnter={() => playSound('blip')}>
+                      <div className="card-icon"><PixelIcon bitmap={PIXEL_ICONS.question} className="pixel-icon" /></div>
+                      <div className="card-content">
+                        <h4>Flash Cards</h4>
+                        <p>Classic practice deck</p>
                       </div>
                     </button>
                   </div>
@@ -4614,6 +4757,151 @@ function AppContent() {
             <HomeIcon className="btn-icon" /> Return to monster kingdom
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (gameMode === 'flashcards') {
+    const currentCard = flashCardDeck[flashCardIndex] || null;
+    const totalCards = flashCardDeck.length;
+
+    return (
+      <div className="App training-page">
+        <div className="arcade-bg" aria-hidden="true">
+          <div className="arcade-bg-stars"></div>
+          <div className="arcade-bg-grid"></div>
+        </div>
+
+        {flashCardPhase === 'setup' && (
+          <div className="flashcards-arcade">
+            <h2 className="flashcards-title">Flash Cards</h2>
+            <p className="flashcards-subtitle">Pick a times table to practice</p>
+
+            <div className="flashcards-factor-grid">
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  className={`flashcards-factor-btn ${flashCardFactor === n ? 'selected' : ''}`}
+                  onClick={() => { playSound('blip'); setFlashCardFactor(n); }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+
+            <div className="flashcards-order-toggle">
+              <button
+                className={`flashcards-order-btn ${flashCardOrder === 'sequential' ? 'selected' : ''}`}
+                onClick={() => { playSound('blip'); setFlashCardOrder('sequential'); }}
+              >
+                In Order
+              </button>
+              <button
+                className={`flashcards-order-btn ${flashCardOrder === 'random' ? 'selected' : ''}`}
+                onClick={() => { playSound('blip'); setFlashCardOrder('random'); }}
+              >
+                Shuffled
+              </button>
+            </div>
+
+            <div className="game-controls">
+              <button
+                className="done-button"
+                disabled={!flashCardFactor}
+                onClick={startFlashCardsRound}
+              >
+                Start
+              </button>
+              <button onClick={backToMenu} className="quit-link">
+                Back to menu
+              </button>
+            </div>
+          </div>
+        )}
+
+        {flashCardPhase === 'playing' && currentCard && (
+          <div className="flashcards-arcade">
+            <div className="game-header">
+              <div className="compact-game-stats">
+                <span className="score">{score.correct}/{score.total}</span>
+                <span className="flashcards-progress">Card {flashCardIndex + 1}/{totalCards}</span>
+              </div>
+            </div>
+
+            <div className="flashcard-scene">
+              <div className={`flashcard ${flashCardFlipped ? 'flipped' : ''}`}>
+                <div className="flashcard-face flashcard-front">
+                  <div className="flashcard-equation-vertical">
+                    <div className="flashcard-num">{currentCard.a}</div>
+                    <div className="flashcard-num flashcard-num-mult">&times; {currentCard.b}</div>
+                    <div className="flashcard-line" />
+                  </div>
+                </div>
+                <div className={`flashcard-face flashcard-back ${feedback.correct ? 'correct' : 'incorrect'}`}>
+                  <div className="flashcard-answer">{currentCard.a * currentCard.b}</div>
+                </div>
+              </div>
+            </div>
+
+            {feedback.show && (
+              <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
+                <div className="feedback-message">{feedback.message}</div>
+              </div>
+            )}
+
+            {!flashCardFlipped && (
+              <div className="answer-row">
+                <input
+                  ref={answerInputRef}
+                  type="number"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  onKeyPress={(e) => { if (e.key === 'Enter') submitFlashCardAnswer(); }}
+                  className="answer-input"
+                  placeholder="Your answer"
+                  onFocus={scrollQuestionIntoView}
+                  enterKeyHint="go"
+                  autoFocus
+                />
+                <button onClick={submitFlashCardAnswer} onMouseDown={(e) => e.preventDefault()} className="submit-button">
+                  Check
+                </button>
+              </div>
+            )}
+
+            <div className="game-controls">
+              <button onClick={backToMenuFromFlashCards} className="quit-link">
+                Back to menu without saving
+              </button>
+            </div>
+          </div>
+        )}
+
+        {flashCardPhase === 'complete' && (
+          <div className="flashcards-arcade results-arcade">
+            <h2 className="flashcards-title">Deck Complete!</h2>
+            <div className="results">
+              <div className="result-item">
+                <span className="result-label">Cards:</span>
+                <span className="result-value">{score.total}</span>
+              </div>
+              <div className="result-item">
+                <span className="result-label">Correct:</span>
+                <span className="result-value">{score.correct}</span>
+              </div>
+              <div className="result-item">
+                <span className="result-label">Accuracy:</span>
+                <span className="result-value">{score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%</span>
+              </div>
+            </div>
+            <div className="game-controls">
+              <button className="done-button" onClick={startFlashCardsRound}>Play Again</button>
+              <button onClick={backToMenuFromFlashCards} className="quit-link">Back to menu</button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

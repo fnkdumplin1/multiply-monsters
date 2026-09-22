@@ -12,10 +12,11 @@ An engaging, gamified multiplication (and division) practice app designed for el
 ### 🎮 Game Modes
 
 #### Solo Adventures
-- **Training** - Unlimited practice at your own pace with instant feedback
+- **Basic** - Unlimited practice at your own pace with instant feedback
 - **Monster Detective** - Solve multiplication mysteries with 5 different clue types
 - **Two-Digit Multiplication** - Step-by-step practice of the traditional vertical algorithm
 - **Division** - Long-division-style practice, the inverse of the multiplication facts
+- **Flash Cards** - Classic self-checking practice deck for one times table (0x-12x), in order or shuffled, with a flip-card reveal - no timer
 
 #### Timed Challenges
 - **Monster Race** - 60-second sprint against the clock
@@ -38,7 +39,7 @@ An engaging, gamified multiplication (and division) practice app designed for el
 #### 👩‍🏫 Teacher Portal
 - Self-service teacher accounts (email/password via Firebase Auth)
 - Students optionally link themselves to a teacher at name entry
-- Every solo/squad session is automatically logged (Training, Monster Race, Boss Battle, Detective, Two-Digit, Division, Squad Battle, Squad Survival)
+- Every solo/squad session is automatically logged (Basic, Monster Race, Boss Battle, Detective, Two-Digit, Division, Flash Cards, Squad Battle, Squad Survival)
 - Rolling 30-day usage dashboard with per-day CSV export
 - Firestore security rules scope data so a teacher only sees their own students
 
@@ -50,6 +51,10 @@ An engaging, gamified multiplication (and division) practice app designed for el
 - Mobile-optimized interface
 
 ## 🆕 What's New in v5.0.2
+
+### New Features
+- Added Flash Cards: a classic self-checking practice deck for one times table (0x-12x), presented in order or shuffled, with a flip-card reveal and Correct!/Not quite! feedback - no timer, no battle arena
+- Renamed Training mode to Basic
 
 ### Bug Fixes
 - Detective mode clues now draw from a shuffled fact deck like every other mode, so the same fact can't keep retesting under different phrasing while other facts go unused
@@ -221,7 +226,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 See the in-app version history screen or [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.
 
 ### Recent Releases
-- **v5.0.2** (Sep 2026) - Bug fixes: Detective mode and Squad Showdown now draw from a properly shuffled/reset question deck, and mobile wrapping/pinching fixes across question text, Next Question buttons, and live rankings tables
+- **v5.0.2** (Sep 2026) - Added Flash Cards solo mode and renamed Training to Basic; bug fixes: Detective mode and Squad Showdown now draw from a properly shuffled/reset question deck, and mobile wrapping/pinching fixes across question text, Next Question buttons, and live rankings tables
 - **v5.0.1** (Sep 2026) - Bug fixes: Squad Showdown timer sync (now 1 minute), mobile text sharpness and answer-field focus/keyboard handling, shuffled-deck question randomization, Detective mode repeats, and multiplayer codes without 0/O
 - **v5.0.0** (Sep 2026) - Arcade re-skin of Battle Mode, Squad Showdown, and the Teacher Portal
 - **v4.0.3** (Jul 2026) - Bug fixes: Squad Showdown and Battle Mode game-restart bugs where a new battle/round didn't reset scores, timers, and could leave players stuck on the old results screen
