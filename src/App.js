@@ -4828,28 +4828,28 @@ function AppContent() {
               </div>
             </div>
 
-            <div className="flashcard-scene">
-              <div className={`flashcard ${flashCardFlipped ? 'flipped' : ''}`}>
-                <div className="flashcard-face flashcard-front">
-                  <div className="flashcard-equation-vertical">
-                    <div className="flashcard-num">{currentCard.a}</div>
-                    <div className="flashcard-num flashcard-num-mult">&times; {currentCard.b}</div>
-                    <div className="flashcard-line" />
+            <div className="question-container flashcards-question-container">
+              <div className="flashcard-scene">
+                <div className={`flashcard ${flashCardFlipped ? 'flipped' : ''}`}>
+                  <div className="flashcard-face flashcard-front">
+                    <div className="flashcard-equation-vertical">
+                      <div className="flashcard-num">{currentCard.a}</div>
+                      <div className="flashcard-num flashcard-num-mult">&times; {currentCard.b}</div>
+                      <div className="flashcard-line" />
+                    </div>
+                  </div>
+                  <div className={`flashcard-face flashcard-back ${feedback.correct ? 'correct' : 'incorrect'}`}>
+                    <div className="flashcard-answer">{currentCard.a * currentCard.b}</div>
                   </div>
                 </div>
-                <div className={`flashcard-face flashcard-back ${feedback.correct ? 'correct' : 'incorrect'}`}>
-                  <div className="flashcard-answer">{currentCard.a * currentCard.b}</div>
+              </div>
+
+              {feedback.show && (
+                <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
+                  <div className="feedback-message">{feedback.message}</div>
                 </div>
-              </div>
-            </div>
+              )}
 
-            {feedback.show && (
-              <div className={`feedback ${feedback.correct ? 'correct' : 'incorrect'}`}>
-                <div className="feedback-message">{feedback.message}</div>
-              </div>
-            )}
-
-            {!flashCardFlipped && (
               <div className="answer-row">
                 <input
                   ref={answerInputRef}
@@ -4862,6 +4862,7 @@ function AppContent() {
                   className="answer-input"
                   placeholder="Your answer"
                   onFocus={scrollQuestionIntoView}
+                  readOnly={flashCardFlipped}
                   enterKeyHint="go"
                   autoFocus
                 />
@@ -4869,7 +4870,7 @@ function AppContent() {
                   Check
                 </button>
               </div>
-            )}
+            </div>
 
             <div className="game-controls">
               <button onClick={backToMenuFromFlashCards} className="quit-link">
