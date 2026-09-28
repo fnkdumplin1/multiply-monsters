@@ -276,6 +276,23 @@ function AppContent() {
     }
   }, [location.pathname, gameMode]);
 
+  // Google Analytics: this is a single-page app, so gtag('config') only reports the first
+  // page load. Send a page_view for every later route change so each game mode shows up
+  // as its own page (/training, /timed, /flashcards, ...) in GA. The first render is
+  // skipped because the config call in public/index.html already reports it.
+  const lastTrackedPathRef = useRef(location.pathname);
+  useEffect(() => {
+    if (lastTrackedPathRef.current === location.pathname) return;
+    lastTrackedPathRef.current = location.pathname;
+    if (window.gtag) {
+      window.gtag('event', 'page_view', {
+        page_path: location.pathname,
+        page_location: window.location.origin + location.pathname,
+        page_title: pathToMode[location.pathname] || location.pathname
+      });
+    }
+  }, [location.pathname]);
+
   // Training mode swaps the page's own backdrop for the arcade starfield -
   // toggled on <body> directly so it always covers the full page, even when
   // .App's own box falls short of the viewport (mobile fill-available quirks).
