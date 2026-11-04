@@ -127,6 +127,8 @@ const MONSTER_TAUNTS = [
 
 // Battle-arena monster sprites - one is picked at random for each new
 // training-mode question so the same monster isn't fought every round.
+const FLASH_CARD_TIME_LIMIT = 10; // seconds per card when the Flash Cards timer is on
+
 const BATTLE_MONSTER_ICON_KEYS = ['monster', 'monsterTentacle', 'monsterHorned', 'monsterBigEye'];
 
 // Neon palette a battle-arena monster's color is drawn from, alongside its sprite.
@@ -387,8 +389,18 @@ function AppContent() {
   }, [gameMode, currentTeacher?.uid]);
 
   // App version and changelog
-  const APP_VERSION = 'v5.0.2';
+  const APP_VERSION = 'v5.1';
   const CHANGELOG = [
+    {
+      version: 'v5.1',
+      date: '11-03-2026',
+      features: [
+        'Flash Cards now shows which questions you missed at the end of a round and offers to practice just those cards, repeating round after round until you score 100%',
+        'Added an optional 10-second timer to Flash Cards: toggle it on at setup or before practicing missed cards. If time runs out, the card counts as wrong, the answer is shown, and the deck moves on',
+        'Fixed Flash Cards briefly showing the next card\'s answer as a card flipped back after answering',
+        'Fixed Flash Cards flashing the answered question again right after the card flipped back'
+      ]
+    },
     {
       version: 'v5.0.2',
       date: '09-22-2026',
@@ -637,6 +649,9 @@ function AppContent() {
   const [flashCardDeck, setFlashCardDeck] = useState([]); // [{a, b}] built from the chosen factor
   const [flashCardIndex, setFlashCardIndex] = useState(0);
   const [flashCardFlipped, setFlashCardFlipped] = useState(false);
+  const [flashCardTimerOn, setFlashCardTimerOn] = useState(false); // optional 10s-per-card countdown
+  const [flashCardTimeLeft, setFlashCardTimeLeft] = useState(FLASH_CARD_TIME_LIMIT);
+  const flashCardTimeUpRef = useRef(null); // always points at the latest submit handler, so the timer never sees stale state
   const [flashCardMissed, setFlashCardMissed] = useState([]); // cards answered wrong this round
   const [flashCardRound, setFlashCardRound] = useState(1); // 1 = full deck, 2+ = retrying missed cards
   // What the back face shows. Kept separate from the current card so the card can advance
@@ -1861,6 +1876,24 @@ function AppContent() {
     return cards;
   };
 
+  // Per-card countdown. Restarts for every new card and stops while the answer is shown.
+  useEffect(() => {
+    if (!flashCardTimerOn || flashCardPhase !== 'playing' || flashCardFlipped) return undefined;
+    const deadline = Date.now() + FLASH_CARD_TIME_LIMIT * 1000;
+    setFlashCardTimeLeft(FLASH_CARD_TIME_LIMIT);
+    const id = setInterval(() => {
+      const left = Math.ceil((deadline - Date.now()) / 1000);
+      if (left <= 0) {
+        clearInterval(id);
+        setFlashCardTimeLeft(0);
+        if (flashCardTimeUpRef.current) flashCardTimeUpRef.current();
+      } else {
+        setFlashCardTimeLeft(left);
+      }
+    }, 200);
+    return () => clearInterval(id);
+  }, [flashCardTimerOn, flashCardPhase, flashCardFlipped, flashCardIndex, flashCardDeck]);
+
   const startFlashCards = () => {
     initializeAudio();
     playSound('click');
@@ -1925,16 +1958,18 @@ function AppContent() {
     setFlashCardPhase('complete');
   };
 
-  const submitFlashCardAnswer = () => {
-    if (!userAnswer.trim() || flashCardFlipped) return;
+  // timedOut: the countdown expired before an answer was submitted, which counts as wrong
+  const submitFlashCardAnswer = (timedOut = false) => {
+    if (flashCardFlipped) return;
+    if (!timedOut && !userAnswer.trim()) return;
     initializeAudio();
-    playSound('submit');
+    if (!timedOut) playSound('submit');
 
     const card = flashCardDeck[flashCardIndex];
     const correctAnswer = card.a * card.b;
-    const isCorrect = parseInt(userAnswer, 10) === correctAnswer;
+    const isCorrect = !timedOut && parseInt(userAnswer, 10) === correctAnswer;
 
-    trackEvent('answer_submitted', 'Gameplay', `flashcards - ${isCorrect ? 'Correct' : 'Incorrect'}`, correctAnswer);
+    trackEvent('answer_submitted', 'Gameplay', `flashcards - ${timedOut ? 'Timed Out' : isCorrect ? 'Correct' : 'Incorrect'}`, correctAnswer);
 
     setScore(prev => ({
       correct: prev.correct + (isCorrect ? 1 : 0),
@@ -1947,7 +1982,7 @@ function AppContent() {
     setFeedback({
       show: true,
       correct: isCorrect,
-      message: isCorrect ? 'Correct!' : 'Not quite!',
+      message: timedOut ? "Time's up!" : isCorrect ? 'Correct!' : 'Not quite!',
       correctAnswer
     });
 
@@ -1974,6 +2009,8 @@ function AppContent() {
       questionTimeoutRef.current = null;
     }, isCorrect ? 1800 : 2800);
   };
+
+  flashCardTimeUpRef.current = () => submitFlashCardAnswer(true);
 
   const backToMenuFromFlashCards = () => {
     if (questionTimeoutRef.current) {
@@ -4843,6 +4880,16 @@ function AppContent() {
               </button>
             </div>
 
+            <div className="flashcards-order-toggle">
+              <button
+                className={`flashcards-order-btn ${flashCardTimerOn ? 'selected' : ''}`}
+                onClick={() => { playSound('blip'); setFlashCardTimerOn(prev => !prev); }}
+                aria-pressed={flashCardTimerOn}
+              >
+                &#9201; {FLASH_CARD_TIME_LIMIT}s Timer: {flashCardTimerOn ? 'On' : 'Off'}
+              </button>
+            </div>
+
             <div className="game-controls">
               <button
                 className="done-button"
@@ -4864,6 +4911,11 @@ function AppContent() {
               <div className="compact-game-stats">
                 <span className="score">{score.correct}/{score.total}</span>
                 <span className="flashcards-progress">Card {flashCardIndex + 1}/{totalCards}</span>
+                {flashCardTimerOn && (
+                  <span className={`flashcards-timer ${flashCardTimeLeft <= 3 && !flashCardFlipped ? 'urgent' : ''}`}>
+                    &#9201; {flashCardTimeLeft}s
+                  </span>
+                )}
               </div>
             </div>
 
@@ -4905,7 +4957,7 @@ function AppContent() {
                   enterKeyHint="go"
                   autoFocus
                 />
-                <button onClick={submitFlashCardAnswer} onMouseDown={(e) => e.preventDefault()} className="submit-button">
+                <button onClick={() => submitFlashCardAnswer()} onMouseDown={(e) => e.preventDefault()} className="submit-button">
                   Check
                 </button>
               </div>
@@ -4945,6 +4997,15 @@ function AppContent() {
                   ))}
                 </ul>
                 <p className="flashcards-missed-prompt">Want to try the missed ones again?</p>
+                <div className="flashcards-order-toggle flashcards-missed-timer">
+                  <button
+                    className={`flashcards-order-btn ${flashCardTimerOn ? 'selected' : ''}`}
+                    onClick={() => { playSound('blip'); setFlashCardTimerOn(prev => !prev); }}
+                    aria-pressed={flashCardTimerOn}
+                  >
+                    &#9201; {FLASH_CARD_TIME_LIMIT}s Timer: {flashCardTimerOn ? 'On' : 'Off'}
+                  </button>
+                </div>
               </div>
             )}
             <div className="game-controls">

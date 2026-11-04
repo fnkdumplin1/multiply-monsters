@@ -5877,6 +5877,23 @@ h5, h6 {
   font-weight: 600;
 }
 
+.flashcards-missed-timer {
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.flashcards-arcade .flashcards-timer {
+  font-family: var(--font-arcade-body);
+  font-size: 1.15rem;
+  color: var(--arcade-neon-cyan);
+  min-width: 3.2em;
+}
+
+.flashcards-arcade .flashcards-timer.urgent {
+  color: var(--arcade-neon-pink);
+  text-shadow: 0 0 8px var(--arcade-neon-pink);
+}
+
 .flashcards-missed-prompt {
   color: #fff;
   margin: 0;

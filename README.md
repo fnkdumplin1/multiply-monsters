@@ -2,7 +2,7 @@
 
 An engaging, gamified multiplication (and division) practice app designed for elementary school students. Features single-player practice, multiplayer classroom battles, detective-style problem solving, and a self-service teacher portal with usage reporting.
 
-![Version](https://img.shields.io/badge/version-5.0.2-blue)
+![Version](https://img.shields.io/badge/version-5.1-blue)
 ![React](https://img.shields.io/badge/React-19.1.1-61dafb)
 ![Firebase](https://img.shields.io/badge/Firebase-12.1.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -50,7 +50,17 @@ An engaging, gamified multiplication (and division) practice app designed for el
 - Progressive Web App (PWA) support for offline play
 - Mobile-optimized interface
 
-## 🆕 What's New in v5.0.2
+## 🆕 What's New in v5.1
+
+### New Features
+- Flash Cards now shows which questions you missed at the end of a round and offers to practice just those cards, repeating round after round until you score 100%
+- Added an optional 10-second timer to Flash Cards: toggle it on at setup or before practicing missed cards. If time runs out, the card counts as wrong, the answer is shown, and the deck moves on
+
+### Bug Fixes
+- Fixed Flash Cards briefly showing the next card's answer as a card flipped back after answering
+- Fixed Flash Cards flashing the answered question again right after the card flipped back
+
+## What's New in v5.0.2
 
 ### New Features
 - Added Flash Cards: a classic self-checking practice deck for one times table (0x-12x), presented in order or shuffled, with a flip-card reveal and Correct!/Not quite! feedback - no timer, no battle arena
@@ -226,6 +236,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 See the in-app version history screen or [CHANGELOG.md](./CHANGELOG.md) for detailed release notes.
 
 ### Recent Releases
+- **v5.1** (Nov 2026) - Flash Cards: missed-question review with repeat practice until 100%, optional 10-second timer, and fixes for answer/question flashing during the card flip
 - **v5.0.2** (Sep 2026) - Added Flash Cards solo mode and renamed Training to Basic; bug fixes: Detective mode and Squad Showdown now draw from a properly shuffled/reset question deck, and mobile wrapping/pinching fixes across question text, Next Question buttons, and live rankings tables
 - **v5.0.1** (Sep 2026) - Bug fixes: Squad Showdown timer sync (now 1 minute), mobile text sharpness and answer-field focus/keyboard handling, shuffled-deck question randomization, Detective mode repeats, and multiplayer codes without 0/O
 - **v5.0.0** (Sep 2026) - Arcade re-skin of Battle Mode, Squad Showdown, and the Teacher Portal
