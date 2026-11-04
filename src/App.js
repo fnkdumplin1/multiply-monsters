@@ -1939,17 +1939,21 @@ function AppContent() {
     questionTimeoutRef.current = setTimeout(() => {
       setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
       setFlashCardFlipped(false);
-      setUserAnswer('');
+      setUserAnswer(''); // empty input also blocks a resubmit during the flip-back
 
-      if (flashCardIndex + 1 < flashCardDeck.length) {
-        setFlashCardIndex(prev => prev + 1);
-        setTimeout(() => {
-          if (answerInputRef.current) answerInputRef.current.focus();
-        }, 100);
-      } else {
-        endFlashCards();
-      }
-      questionTimeoutRef.current = null;
+      // Hold the old card in place until the 0.5s flip-back finishes; swapping the
+      // card now would show the next card's answer on the back face mid-rotation
+      questionTimeoutRef.current = setTimeout(() => {
+        if (flashCardIndex + 1 < flashCardDeck.length) {
+          setFlashCardIndex(prev => prev + 1);
+          setTimeout(() => {
+            if (answerInputRef.current) answerInputRef.current.focus();
+          }, 100);
+        } else {
+          endFlashCards();
+        }
+        questionTimeoutRef.current = null;
+      }, 550);
     }, isCorrect ? 1800 : 2800);
   };
 
