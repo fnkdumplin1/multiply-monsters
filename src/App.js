@@ -637,6 +637,9 @@ function AppContent() {
   const [flashCardDeck, setFlashCardDeck] = useState([]); // [{a, b}] built from the chosen factor
   const [flashCardIndex, setFlashCardIndex] = useState(0);
   const [flashCardFlipped, setFlashCardFlipped] = useState(false);
+  // What the back face shows. Kept separate from the current card so the card can advance
+  // while the old answer is still visible during the flip-back animation.
+  const [flashCardReveal, setFlashCardReveal] = useState({ answer: 0, correct: false });
 
   // Multiplayer states
   const [isMultiplayer, setIsMultiplayer] = useState(false);
@@ -1923,6 +1926,7 @@ function AppContent() {
       total: prev.total + 1
     }));
 
+    setFlashCardReveal({ answer: correctAnswer, correct: isCorrect });
     setFlashCardFlipped(true);
     setFeedback({
       show: true,
@@ -1939,21 +1943,19 @@ function AppContent() {
     questionTimeoutRef.current = setTimeout(() => {
       setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
       setFlashCardFlipped(false);
-      setUserAnswer(''); // empty input also blocks a resubmit during the flip-back
+      setUserAnswer('');
 
-      // Hold the old card in place until the 0.5s flip-back finishes; swapping the
-      // card now would show the next card's answer on the back face mid-rotation
-      questionTimeoutRef.current = setTimeout(() => {
-        if (flashCardIndex + 1 < flashCardDeck.length) {
-          setFlashCardIndex(prev => prev + 1);
-          setTimeout(() => {
-            if (answerInputRef.current) answerInputRef.current.focus();
-          }, 100);
-        } else {
-          endFlashCards();
-        }
-        questionTimeoutRef.current = null;
-      }, 550);
+      // Advance immediately: the back face renders from flashCardReveal, so the old answer
+      // stays visible while the card flips back and the front already shows the next question
+      if (flashCardIndex + 1 < flashCardDeck.length) {
+        setFlashCardIndex(prev => prev + 1);
+        setTimeout(() => {
+          if (answerInputRef.current) answerInputRef.current.focus();
+        }, 100);
+      } else {
+        endFlashCards();
+      }
+      questionTimeoutRef.current = null;
     }, isCorrect ? 1800 : 2800);
   };
 
@@ -4859,8 +4861,8 @@ function AppContent() {
                       <div className="flashcard-line" />
                     </div>
                   </div>
-                  <div className={`flashcard-face flashcard-back ${feedback.correct ? 'correct' : 'incorrect'}`}>
-                    <div className="flashcard-answer">{currentCard.a * currentCard.b}</div>
+                  <div className={`flashcard-face flashcard-back ${flashCardReveal.correct ? 'correct' : 'incorrect'}`}>
+                    <div className="flashcard-answer">{flashCardReveal.answer}</div>
                   </div>
                 </div>
               </div>
