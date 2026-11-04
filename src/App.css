@@ -5848,6 +5848,40 @@ h5, h6 {
   box-shadow: 0 0 20px rgba(255, 46, 154, 0.55);
 }
 
+.flashcards-missed {
+  margin: 16px 0;
+  text-align: center;
+}
+
+.flashcards-missed-title {
+  color: var(--arcade-neon-pink);
+  font-size: 1.1rem;
+  margin: 0 0 8px;
+}
+
+.flashcards-missed-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.flashcards-missed-list li {
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 46, 154, 0.4);
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.flashcards-missed-prompt {
+  color: #fff;
+  margin: 0;
+}
+
 .flashcards-arcade .game-controls {
   display: flex;
   justify-content: center;

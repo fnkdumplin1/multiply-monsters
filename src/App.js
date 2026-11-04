@@ -637,6 +637,8 @@ function AppContent() {
   const [flashCardDeck, setFlashCardDeck] = useState([]); // [{a, b}] built from the chosen factor
   const [flashCardIndex, setFlashCardIndex] = useState(0);
   const [flashCardFlipped, setFlashCardFlipped] = useState(false);
+  const [flashCardMissed, setFlashCardMissed] = useState([]); // cards answered wrong this round
+  const [flashCardRound, setFlashCardRound] = useState(1); // 1 = full deck, 2+ = retrying missed cards
   // What the back face shows. Kept separate from the current card so the card can advance
   // while the old answer is still visible during the flip-back animation.
   const [flashCardReveal, setFlashCardReveal] = useState({ answer: 0, correct: false });
@@ -1871,6 +1873,8 @@ function AppContent() {
     setFlashCardDeck([]);
     setFlashCardIndex(0);
     setFlashCardFlipped(false);
+    setFlashCardMissed([]);
+    setFlashCardRound(1);
     setGameActive(false);
     setScore({ correct: 0, total: 0 });
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
@@ -1879,11 +1883,22 @@ function AppContent() {
 
   const startFlashCardsRound = () => {
     if (!flashCardFactor) return;
+    beginFlashCardRound(buildFlashCardDeck(flashCardFactor, flashCardOrder), 1);
+  };
+
+  // Re-drill only the cards missed last round; each round is scored on its own
+  const retryMissedFlashCards = () => {
+    if (flashCardMissed.length === 0) return;
+    beginFlashCardRound(flashCardMissed, flashCardRound + 1);
+  };
+
+  const beginFlashCardRound = (deck, round) => {
     playSound('click');
-    const deck = buildFlashCardDeck(flashCardFactor, flashCardOrder);
     setFlashCardDeck(deck);
     setFlashCardIndex(0);
     setFlashCardFlipped(false);
+    setFlashCardMissed([]);
+    setFlashCardRound(round);
     setScore({ correct: 0, total: 0 });
     setFeedback({ show: false, correct: false, message: '', correctAnswer: 0 });
     setUserAnswer('');
@@ -1927,6 +1942,7 @@ function AppContent() {
     }));
 
     setFlashCardReveal({ answer: correctAnswer, correct: isCorrect });
+    if (!isCorrect) setFlashCardMissed(prev => [...prev, card]);
     setFlashCardFlipped(true);
     setFeedback({
       show: true,
@@ -4905,7 +4921,7 @@ function AppContent() {
 
         {flashCardPhase === 'complete' && (
           <div className="flashcards-arcade results-arcade">
-            <h2 className="flashcards-title">Deck Complete!</h2>
+            <h2 className="flashcards-title">{flashCardRound > 1 ? `Round ${flashCardRound} Complete!` : 'Deck Complete!'}</h2>
             <div className="results">
               <div className="result-item">
                 <span className="result-label">Cards:</span>
@@ -4920,8 +4936,26 @@ function AppContent() {
                 <span className="result-value">{score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%</span>
               </div>
             </div>
+            {flashCardMissed.length > 0 && (
+              <div className="flashcards-missed">
+                <h3 className="flashcards-missed-title">Questions you missed</h3>
+                <ul className="flashcards-missed-list">
+                  {flashCardMissed.map(card => (
+                    <li key={`${card.a}x${card.b}`}>{card.a} &times; {card.b} = {card.a * card.b}</li>
+                  ))}
+                </ul>
+                <p className="flashcards-missed-prompt">Want to try the missed ones again?</p>
+              </div>
+            )}
             <div className="game-controls">
-              <button className="done-button" onClick={startFlashCardsRound}>Play Again</button>
+              {flashCardMissed.length > 0 ? (
+                <>
+                  <button className="done-button" onClick={retryMissedFlashCards}>Practice Missed Cards</button>
+                  <button onClick={startFlashCardsRound} className="quit-link">Restart full deck</button>
+                </>
+              ) : (
+                <button className="done-button" onClick={startFlashCardsRound}>Play Again</button>
+              )}
               <button onClick={backToMenuFromFlashCards} className="quit-link">Back to menu</button>
             </div>
           </div>
